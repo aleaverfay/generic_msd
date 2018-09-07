@@ -1,0 +1,4 @@
+SCALAR_EXPRESSION best_MH3_MH4 = vmin( vMH3_MH4 )
+SCALAR_EXPRESSION best_dGbind = vmin( vdGbind_MH3_MH4 )
+
+FITNESS best_MH3_MH4 + %(WSCAN)s * best_dGbind

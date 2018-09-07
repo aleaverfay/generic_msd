@@ -1,0 +1,7 @@
+MH3_MH4    corr= MH3_MH4.corr   2res= design_both.2resfile
+MH3_WTH4   corr= MH3_WTH4.corr  2res= design_A.2resfile
+WTH3_MH4   corr= WTH3_MH4.corr  2res= design_B.2resfile
+MH3_p_MH4  corr= MH3_MH4.corr   2res= design_both_sep.2resfile
+MH3_p_WTH4 corr= MH3_WTH4.corr  2res= design_A_sep.2resfile
+WTH3_p_MH4 corr= WTH3_MH4.corr  2res= design_B_sep.2resfile
+entfunc h3h4_native.entfunc
