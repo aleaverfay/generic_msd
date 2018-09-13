@@ -1,6 +1,7 @@
 import blargs
 import os
 import math
+import traceback
 
 
 class StateVersionOpts:
@@ -474,9 +475,9 @@ class MSDIntDesJobOptions:
         p.int("ntop_msd_results_to_dock").default(1)
         p.str("job_name").shorthand("j").required()
         p.multiword("flags_files").shorthand("f").default("").cast(lambda x: x.split())
-        p.str("w_dGdiff_bonus_weights_file").shorthand("w")
+        p.str("w_dGdiff_bonus_weights_file").shorthand("w").required()
         p.str("daf").shorthand("a").required()
-        p.str("entfunc_weights_file").shorthand("e")
+        p.str("entfunc_weights_file").shorthand("e").required()
         p.flag("preserve_DAF").shorthand("p")
         p.str("positive_states").default("")
         p.float("ngen_scale").default(15)
@@ -514,6 +515,12 @@ class PostProcessingOpts:
         p.flag("relax")
         p.int("docking_n_cpu").default(45)
 
+def resolve_abs_path(fname):
+    if len(fname) > 0 and fname[0] == "/":
+        return fname
+    else:
+        print(os.getcwd(), fname)
+        return "/".join([os.getcwd(), fname])
 
 class InterfaceMSDJob:
 
@@ -593,10 +600,10 @@ class InterfaceMSDJob:
         self.ntop_msd_results_to_dock = msd_opts.ntop_msd_results_to_dock
         self.base_dir = msd_opts.base_dir
         self.job_name_ = msd_opts.job_name
-        self.flags_files = msd_opts.flags_files
-        self.w_dGdiff_bonus_weights_file = msd_opts.w_dGdiff_bonus_weights_file
+        self.flags_files = [resolve_abs_path(x) for x in msd_opts.flags_files]
+        self.w_dGdiff_bonus_weights_file = resolve_abs_path(msd_opts.w_dGdiff_bonus_weights_file)
         self.daf = msd_opts.daf
-        self.entfunc_weights_file = msd_opts.entfunc_weights_file
+        self.entfunc_weights_file = resolve_abs_path(msd_opts.entfunc_weights_file)
         self.preserve_DAF = msd_opts.preserve_DAF
         self.positive_states = msd_opts.positive_states
         self.ngen_scale = msd_opts.ngen_scale

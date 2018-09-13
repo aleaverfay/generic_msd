@@ -3,6 +3,8 @@
 from enum import Enum
 import socket
 import toolz.functoolz
+import traceback
+import sys
 
 
 class KnownComputers(Enum):
@@ -12,7 +14,6 @@ class KnownComputers(Enum):
     WIGGINS = "wiggins"
     ANDREWS_LAPTOP = "andrews_laptop"
     CATHYS_DESKTOP = "cathys_desktop"
-
 
 class ServerIdentifier:
     @toolz.functoolz.memoize
