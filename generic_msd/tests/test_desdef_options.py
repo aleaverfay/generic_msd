@@ -1,5 +1,5 @@
-from msd_interface_design import DesignDefinitionOpts
-from opt_holder import OptHolder
+from generic_msd.msd_interface_design import DesignDefinitionOpts
+from generic_msd.opt_holder import OptHolder
 import blargs
 
 

@@ -1,13 +1,13 @@
-from msd_interface_design import (
+from generic_msd.msd_interface_design import (
     MSDIntDesJobOptions,
     DesignDefinitionOpts,
     StateVersionOpts,
     PostProcessingOpts,
 )
-from tests.dummy_desdef import dummy_design_species
-from tests.dummy_state_version import dummy_state_version
-from tests.dummy_interface_job import H3H4InterfaceMSDJob
-from opt_holder import OptHolder
+from generic_msd.tests.dummy_desdef import dummy_design_species
+from generic_msd.tests.dummy_state_version import dummy_state_version
+from generic_msd.tests.dummy_interface_job import H3H4InterfaceMSDJob
+from generic_msd.opt_holder import OptHolder
 import blargs
 import os
 
@@ -34,6 +34,10 @@ def test_create_h3h4_msd_job():
             "test_job1",
             "--daf",
             basedir + "input_files/fitness_functions/example_func.txt",
+            "--entfunc_weights_file",
+            basedir + "input_files/scan_weights/scan_1_2.txt",
+            "--w_dGdiff_bonus_weights_file",
+            basedir + "input_files/scan_weights/scan_1_2.txt",
         ]
     )
 
@@ -66,6 +70,10 @@ def test_create_h3h4_fitness_lines():
             "test_job1",
             "--daf",
             basedir + "input_files/fitness_functions/example_func.txt",
+            "--entfunc_weights_file",
+            basedir + "input_files/scan_weights/scan_1_2.txt",
+            "--w_dGdiff_bonus_weights_file",
+            basedir + "input_files/scan_weights/scan_1_2.txt",
         ]
     )
 

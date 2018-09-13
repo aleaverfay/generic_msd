@@ -1,14 +1,15 @@
-from msd_interface_design import (
+from generic_msd.msd_interface_design import (
     DesignSpecies,
     DesignDefinitionOpts,
     DesDefFnames,
     StateVersion,
     StateVersionOpts,
 )
-import separate_h3h4_interface
+import generic_msd.tests.separate_h3h4_interface
+from generic_msd.tests.dummy_desdef import dummy_design_species
+from generic_msd.tests.dummy_state_version import dummy_state_version
 import os
-from tests.dummy_desdef import dummy_design_species
-from tests.dummy_state_version import dummy_state_version
+
 
 
 class empty_class:

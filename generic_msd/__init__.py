@@ -1,1 +1,1 @@
-import msd_interface_design  # noqa: 401
+import generic_msd.msd_interface_design  # noqa: 401

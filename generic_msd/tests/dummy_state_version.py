@@ -1,4 +1,4 @@
-from msd_interface_design import (
+from generic_msd.msd_interface_design import (
     DesignSpecies,
     DesignDefinitionOpts,
     DesDefFnames,

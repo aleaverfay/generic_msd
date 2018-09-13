@@ -1,5 +1,5 @@
-from msd_interface_design import DesignSpecies, DesignDefinitionOpts, DesDefFnames
-from tests.dummy_desdef import dummy_design_species
+from generic_msd.msd_interface_design import DesignSpecies, DesignDefinitionOpts, DesDefFnames
+from generic_msd.tests.dummy_desdef import dummy_design_species
 
 import os
 

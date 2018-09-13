@@ -1,15 +1,15 @@
-from tests.dummy_desdef import dummy_design_species
-from tests.dummy_state_version import dummy_state_version
-from tests.dummy_interface_job import H3H4InterfaceMSDJob
-from opt_holder import OptHolder
-from msd_interface_design import (
+from generic_msd.tests.dummy_desdef import dummy_design_species
+from generic_msd.tests.dummy_state_version import dummy_state_version
+from generic_msd.tests.dummy_interface_job import H3H4InterfaceMSDJob
+from generic_msd.opt_holder import OptHolder
+from generic_msd.msd_interface_design import (
     MSDIntDesJobOptions,
     DesignDefinitionOpts,
     StateVersionOpts,
     PostProcessingOpts,
 )
-from msd_job_management import MSDJobManager, JobExecutionOptions
-from server_identification import KnownComputers, ServerIdentifier
+from generic_msd.msd_job_management import MSDJobManager, JobExecutionOptions
+from generic_msd.server_identification import KnownComputers, ServerIdentifier
 import blargs
 import os
 

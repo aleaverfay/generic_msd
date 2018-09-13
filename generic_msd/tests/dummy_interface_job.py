@@ -1,4 +1,4 @@
-from msd_interface_design import (
+from generic_msd.msd_interface_design import (
     MSDIntDesJobOptions,
     InterfaceMSDJob,
     DesignSpecies,
@@ -8,9 +8,9 @@ from msd_interface_design import (
     DesDefFnames,
     PostProcessingOpts,
 )
-from tests.dummy_desdef import dummy_design_species
-from tests.dummy_state_version import dummy_state_version
-from opt_holder import OptHolder
+from generic_msd.tests.dummy_desdef import dummy_design_species
+from generic_msd.tests.dummy_state_version import dummy_state_version
+from generic_msd.opt_holder import OptHolder
 import blargs
 
 

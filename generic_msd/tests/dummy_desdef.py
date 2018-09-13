@@ -1,4 +1,4 @@
-from msd_interface_design import DesignSpecies
+from generic_msd.msd_interface_design import DesignSpecies
 import toolz.functoolz
 
 
