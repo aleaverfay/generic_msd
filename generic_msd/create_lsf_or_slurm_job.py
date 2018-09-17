@@ -42,15 +42,15 @@ def command_and_submission_script_for_job(
     """
 
     if job_options.scheduler == SchedulerType.LSF_SCHEDULER:
-        subcmd_list = ["bsub -n "]
+        subcmd_list = ["bsub -n"]
         subcmd_list.append(str(job_options.num_nodes))
-        subcmd_list.append(" -q " + job_options.queue)
-        subcmd_list.append(" -o " + job_options.logfilename)
+        subcmd_list.append("-q " + job_options.queue)
+        subcmd_list.append("-o " + job_options.logfilename)
         if job_options.mpi_job:
-            subcmd_list.append(" -a mvapich mpirun " + command_line)
+            subcmd_list.append("-a mvapich mpirun " + command_line)
         else:
             subcmd_list.append(command_line)
-        return ("".join(subcmd_list), None)
+        return (" ".join(subcmd_list), None)
     else:
         assert job_options.scheduler == SchedulerType.SLURM_SCHEDULER
 

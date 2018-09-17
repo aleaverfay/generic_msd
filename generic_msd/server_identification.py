@@ -37,7 +37,7 @@ class ServerIdentifier:
             print("what computer? Assume Cathy's desktop", hostname)
             return KnownComputers.CATHYS_DESKTOP
 
-    def _on_killdevil(hostname=None):
+    def _on_killdevil(self, hostname=None):
         """Logic for figuring out whether or not you're on killdevil vs dogwood"""
         if hostname is None:
             hostname = socket.gethostname()[:9]
@@ -50,7 +50,7 @@ class ServerIdentifier:
         else:
             return False
 
-    def _on_dogwood(hostname=None):
+    def _on_dogwood(self, hostname=None):
         """Logic for figuring out whether or not you're on dogwood vs killdevil"""
         if hostname is None:
             hostname = socket.gethostname()

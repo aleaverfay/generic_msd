@@ -5,6 +5,7 @@ from .server_identification import ServerIdentifier, KnownComputers
 from .create_lsf_or_slurm_job import (SubmissionOptions, command_and_submission_script_for_job, SchedulerType, scheduler_type_for_server)
 import typing
 import math
+import sys
 
 
 def leading_zero_string(num: int, maxrange: int) -> str:
@@ -70,12 +71,18 @@ def mpi_msd_exe(si: ServerIdentifier):
         else bin_dir(si) + "mpi_msd.mpiserialization.linuxgccrelease"
     )
 
+def rosetta_scripts_jd3_exe(si: ServerIdentifier):
+    #server = si.what_computer()
+    #assert server == KnownComputers.KILLDEVIL or server == KnownComputers.DOGWOOD
+    return bin_dir(si) + "rosetta_scripts_jd3.mpiserialization.linuxgccrelease"
+
+
 
 def pyscripts_path(si: ServerIdentifier):
     return (
-        "/nas02/home/l/e/leaverfa/pyscripts"
+        "/nas02/home/l/e/leaverfa/pyscripts/"
         if si.what_computer() == KnownComputers.KILLDEVIL
-        else "/nas/longleaf/home/leaverfa/pyscripts"
+        else "/nas/longleaf/home/leaverfa/pyscripts/"
     )
 
 
@@ -115,6 +122,7 @@ class MSDJobManager:
 
         self.prepare_postprocessing_step()
         self.write_submission_and_gather_files()
+        self.save_creation_command()
         if self.options.launch:
             self.launch()
         os.chdir("..")
@@ -177,7 +185,10 @@ class MSDJobManager:
         submission_command, command_filename = command_and_submission_script_for_job(
             job_options, command_line
         )
+        self.launch_script.append("cd " + subdir + "\n")
         self.launch_script.append(submission_command + " >> ../msd_submission.log\n")
+        self.launch_script.append("cd ..\n")
+        self.launch_script.append("\n")
 
         self.gather_script.append("cd " + subdir + "\n")
         species = self.msd_job.states_to_save()
@@ -199,7 +210,7 @@ class MSDJobManager:
             self.gather_script.append(
                 "echo "
                 + prefix
-                + (".pdb" + prefix).join(complexes)
+                + (".pdb " + prefix).join(complexes)
                 + ".pdb >> results/complex_sets.list\n"
             )
         self.gather_script.append("\n")
@@ -232,31 +243,32 @@ class MSDJobManager:
         launch_docking_script.append(" ".join(dock_jobs_command))
 
         # now prepare the dock_jobs_view command and append it to the launch_docking script
-        dock_jobs_view_job_opts = SubmissionOptions()
-        dock_jobs_view_job_opts.scheduler = scheduler_type_for_server(self.si)
-        dock_jobs_view_job_opts.num_nodes = 1
-        dock_jobs_view_job_opts.queue = "debug_queue"
-        dock_jobs_view_job_opts.job_name = self.msd_job.job_name() + "_dock_jobs_view"
-        dock_jobs_view_job_opts.logfilename = self.msd_job.job_name() + "_djv.log"
-        dock_jobs_view_job_opts.submission_script_fname = "djv_submit.sh"
+        #dock_jobs_view_job_opts = SubmissionOptions()
+        #dock_jobs_view_job_opts.scheduler = scheduler_type_for_server(self.si)
+        #dock_jobs_view_job_opts.num_nodes = 1
+        #dock_jobs_view_job_opts.queue = "debug_queue"
+        #dock_jobs_view_job_opts.job_name = self.msd_job.job_name() + "_dock_jobs_view"
+        #dock_jobs_view_job_opts.logfilename = self.msd_job.job_name() + "_djv.log"
+        #dock_jobs_view_job_opts.submission_script_fname = "djv_submit.sh"
 
-        dock_jobs_view_command_line = (
-            "python3 "
-            + self.base_dir
-            + "pyscripts/dock_jobs_view.py -l complex_sets.list -o after_docking_dGbind.txt"
-        )
-        dock_jobs_view_submission_command, dock_jobs_view_command_filename = command_and_submission_script_for_job(
-            dock_jobs_view_job_opts, dock_jobs_view_command_line
-        )
+        dock_jobs_view_command_line = " ".join([
+            "python3",
+            self.base_dir + "pyscripts/dock_jobs_view.py",
+            "-l complex_sets.list -o after_docking_dGbind.txt",
+            self.msd_job.post_processing_opts.to_command_line(),
+            ])
+        #dock_jobs_view_submission_command, dock_jobs_view_command_filename = command_and_submission_script_for_job(
+        #    dock_jobs_view_job_opts, dock_jobs_view_command_line
+        #)
 
-        if dock_jobs_view_command_filename is None:
-            with open("djv_submit.sh", "w") as fid:
-                fid.writelines(dock_jobs_view_submission_command)
-        dock_jobs_view_command = [
+        #if dock_jobs_view_command_filename is None:
+        #    with open("djv_submit.sh", "w") as fid:
+        #        fid.writelines(dock_jobs_view_submission_command)
+        dock_jobs_view_submission_command = [
             "python3",
             pyscripts_path(self.si) + "submit_dependent_script.py",
-            "dock/dock_submission.log djv_submit.sh",
-            self.msd_job.post_processing_opts.to_command_line(),
+            "dock/dock_submission.log",
+            dock_jobs_view_command_line,
             "\n",
         ]
 
@@ -265,33 +277,36 @@ class MSDJobManager:
         #    # if options.relax_protocol != "" :
         #    #     dock_jobs_view_command += " --relax-protocol " + options.relax_protocol
 
-        launch_docking_script.append(" ".join(dock_jobs_view_command))
+        launch_docking_script.append(" ".join(dock_jobs_view_submission_command))
 
-        launch_docking_job_opts = SubmissionOptions()
-        launch_docking_job_opts.scheduler = scheduler_type_for_server(self.si)
-        launch_docking_job_opts.num_nodes = 1
-        launch_docking_job_opts.queue = "debug_queue"
-        launch_docking_job_opts.job_name = self.msd_job.job_name() + "_launch_docking"
-        launch_docking_job_opts.logfilename = (
-            self.msd_job.job_name() + "_launch_docking.log"
-        )
-        launch_docking_job_opts.submission_script_fname = "launch_docking.sh"
-
-        launch_docking_submission_command, launch_docking_command_filename = command_and_submission_script_for_job(
-            launch_docking_job_opts, "".join(launch_docking_script)
-        )
-
-        if launch_docking_command_filename is None:
-            open("launch_docking.sh", "w").writelines(launch_docking_submission_command)
-        open("prepare_for_docking.sh", "w").writelines(
-            " ".join(
-                [
-                    "python3",
-                    pyscripts_path(self.si) + "submit_dependent_script.py",
-                    "msd_submission.log launch_docking.sh\n",
-                ]
+        #launch_docking_job_opts = SubmissionOptions()
+        #launch_docking_job_opts.scheduler = scheduler_type_for_server(self.si)
+        #launch_docking_job_opts.num_nodes = 1
+        #launch_docking_job_opts.queue = "debug"
+        #launch_docking_job_opts.job_name = self.msd_job.job_name() + "_launch_docking"
+        #launch_docking_job_opts.logfilename = (
+        #    self.msd_job.job_name() + "_launch_docking.log"
+        #)
+        #launch_docking_job_opts.submission_script_fname = "launch_docking.sh"
+        #
+        #launch_docking_submission_command, launch_docking_command_filename = command_and_submission_script_for_job(
+        #    launch_docking_job_opts, "".join(launch_docking_script)
+        #)
+        #
+        #if launch_docking_command_filename is None:
+        with open("launch_docking.sh", "w") as fid:
+            fid.writelines(launch_docking_script)
+            
+        with open("prepare_for_docking.sh", "w") as fid:
+            fid.writelines(
+                " ".join(
+                    [
+                        "python3",
+                        pyscripts_path(self.si) + "submit_dependent_script.py",
+                        "msd_submission.log launch_docking.sh\n",
+                    ]
+                )
             )
-        )
 
     def write_submission_and_gather_files(self):
         with open("submit_all_jobs.sh", "w") as fid:
@@ -299,5 +314,9 @@ class MSDJobManager:
         with open("gather_output.sh", "w") as fid:
             fid.writelines(self.gather_script)
 
+    def save_creation_command(self):
+        with open("creation_command.txt", "w") as fid:
+            fid.writelines( " ".join(sys.argv))
+        
     def launch(self):
         pass

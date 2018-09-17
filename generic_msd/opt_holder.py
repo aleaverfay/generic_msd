@@ -7,4 +7,4 @@ class OptHolder:
     """
 
     def __setitem__(self, key, val):
-        setattr(self, key, val)
+        setattr(self, key.replace("-","_"), val)

@@ -168,7 +168,7 @@ class StateVersion:
     The "neg_complexes.list" file will list all the backbones and PDBs that
     should be used only for negative species, and must state that any PDB
     within represents another conformation of a backbone first identified
-    in either the "pos_backbones.list" or "neg_backbones.list files, and
+    in either the "pos_backbones.list" or "neg_backbones.list" files, and
     must also state WHICH mutant species this negaive conformation should
     be used for using a "mut_status" id, (described above). Only the
     complex PDB should be listed for PDBs in this file -- the separated
@@ -509,7 +509,7 @@ class PostProcessingOpts:
     @staticmethod
     def add_options(blargs_parser: blargs.Parser):
         p = blargs_parser
-        p.multiword("docking_flags_files").shorthand("o").default("").cast(
+        p.multiword("docking_flags_files").default("").cast(
             lambda x: x.split()
         )
         p.flag("relax")
