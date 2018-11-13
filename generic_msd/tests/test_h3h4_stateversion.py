@@ -1,7 +1,7 @@
 from generic_msd.msd_interface_design import (
-    DesignSpecies,
+    IsolateBBDesignSpecies,
     DesignDefinitionOpts,
-    DesDefFnames,
+    IsolateBBDesDefFnames,
     StateVersion,
     StateVersionOpts,
 )
@@ -41,7 +41,7 @@ def test_create_state_version():
     state_ver_opts = StateVersionOpts(dummy_opts)
 
     spec = dummy_design_species()
-    fnames = DesDefFnames(desdef_opts, spec)
+    fnames = IsolateBBDesDefFnames(desdef_opts, spec)
     state_ver = StateVersion(state_ver_opts, spec)
 
     assert hasattr(state_ver, "backbone_names")
@@ -63,7 +63,7 @@ def test_state_version_determine_pdbs():
     state_ver_opts = StateVersionOpts(dummy_opts)
 
     spec = dummy_design_species()
-    fnames = DesDefFnames(desdef_opts, spec)
+    fnames = IsolateBBDesDefFnames(desdef_opts, spec)
     state_ver = dummy_state_version(state_ver_opts, spec)
 
     state_ver.determine_pdbs()
@@ -110,12 +110,12 @@ def test_state_version_generate_states_file():
     state_ver_opts = StateVersionOpts(dummy_opts)
 
     spec = dummy_design_species()
-    fnames = DesDefFnames(desdef_opts, spec)
+    fnames = IsolateBBDesDefFnames(desdef_opts, spec)
     state_ver = dummy_state_version(state_ver_opts, spec)
 
     assert (
         state_ver.state_version_dir
-        == basedir + "input_files/state_versions/frwt_v1mock_dd2/"
+        == os.path.join(basedir,"input_files/state_versions/frwt_v1mock_dd2")
     )
     svdir = state_ver.state_version_dir
 
@@ -131,24 +131,24 @@ def test_state_version_generate_states_file():
     state_ver.determine_pdbs()
     state_ver.create_state_file_lists()
 
-    assert os.path.isfile(svdir + "MH3_MH4_for_rwt_0982.states")
+    assert os.path.isfile(os.path.join(svdir, "MH3_MH4_for_rwt_0982.states"))
     for bb in wtAbbs:
-        assert os.path.isfile(svdir + "WTH3_MH4_for_" + bb + ".states")
+        assert os.path.isfile(os.path.join(svdir, "WTH3_MH4_for_" + bb + ".states"))
     for bb in wtBbbs:
-        assert os.path.isfile(svdir + "MH3_WTH4_for_" + bb + ".states")
+        assert os.path.isfile(os.path.join(svdir, "MH3_WTH4_for_" + bb + ".states"))
 
-    with open(svdir + "MH3_MH4_for_rwt_0982.states") as fid:
+    with open(os.path.join(svdir, "MH3_MH4_for_rwt_0982.states")) as fid:
         lines = fid.readlines()
         gold_lines = ["1KX5_chAB_0982.pdb MH3_MH4.corr MH3_MH4.2resfile\n"]
         assert lines == gold_lines
 
-    with open(svdir + "MH3_MH4_for_rwt_0982.states") as fid:
+    with open(os.path.join(svdir, "MH3_MH4_for_rwt_0982.states")) as fid:
         lines = fid.readlines()
         gold_lines = ["1KX5_chAB_0982.pdb MH3_MH4.corr MH3_MH4.2resfile\n"]
         assert lines == gold_lines
 
     for bb in wtAbbs:
-        with open(svdir + "WTH3_MH4_for_" + bb + ".states") as fid:
+        with open(os.path.join(svdir, "WTH3_MH4_for_" + bb + ".states")) as fid:
             lines = fid.readlines()
             gold_lines = [
                 ("%s WTH3_MH4.corr WTH3_MH4.2resfile\n" % pdb)
@@ -164,7 +164,7 @@ def test_state_version_generate_states_file():
             )
             assert lines == gold_lines
     for bb in wtAbbs:
-        with open(svdir + "WTH3_p_MH4_for_" + bb + ".states") as fid:
+        with open(os.path.join(svdir, "WTH3_p_MH4_for_" + bb + ".states")) as fid:
             lines = fid.readlines()
             gold_lines = [
                 ("%s WTH3_p_MH4.corr WTH3_p_MH4.2resfile\n" % pdb)
@@ -174,7 +174,7 @@ def test_state_version_generate_states_file():
             assert lines == gold_lines
 
     for bb in wtBbbs:
-        with open(svdir + "MH3_WTH4_for_" + bb + ".states") as fid:
+        with open(os.path.join(svdir, "MH3_WTH4_for_" + bb + ".states")) as fid:
             lines = fid.readlines()
             gold_lines = [
                 ("%s MH3_WTH4.corr MH3_WTH4.2resfile\n" % pdb)
@@ -190,7 +190,7 @@ def test_state_version_generate_states_file():
             )
             assert lines == gold_lines
     for bb in wtBbbs:
-        with open(svdir + "MH3_p_WTH4_for_" + bb + ".states") as fid:
+        with open(os.path.join(svdir, "MH3_p_WTH4_for_" + bb + ".states")) as fid:
             lines = fid.readlines()
             gold_lines = [
                 ("%s MH3_p_WTH4.corr MH3_p_WTH4.2resfile\n" % pdb)
@@ -219,7 +219,7 @@ def test_state_version_pdbs_function():
     state_ver_opts = StateVersionOpts(dummy_opts)
 
     spec = dummy_design_species()
-    fnames = DesDefFnames(desdef_opts, spec)
+    fnames = IsolateBBDesDefFnames(desdef_opts, spec)
     state_ver = dummy_state_version(state_ver_opts, spec)
 
     gold_pdbs = set(
@@ -251,7 +251,7 @@ def test_state_version_nstates_total():
     state_ver_opts = StateVersionOpts(dummy_opts)
 
     spec = dummy_design_species()
-    fnames = DesDefFnames(desdef_opts, spec)
+    fnames = IsolateBBDesDefFnames(desdef_opts, spec)
     state_ver = dummy_state_version(state_ver_opts, spec)
     state_ver.determine_pdbs()
 

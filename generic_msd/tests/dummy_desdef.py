@@ -1,8 +1,8 @@
-from generic_msd.msd_interface_design import DesignSpecies
+from generic_msd.msd_interface_design import IsolateBBDesignSpecies
 import toolz.functoolz
 
 
-class dummy_design_species(DesignSpecies):
+class dummy_design_species(IsolateBBDesignSpecies):
     @toolz.functoolz.memoize
     def species(self):
         return [

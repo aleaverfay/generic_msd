@@ -1,7 +1,7 @@
 from generic_msd.msd_interface_design import (
     DesignSpecies,
     DesignDefinitionOpts,
-    DesDefFnames,
+    IsolateBBDesDefFnames,
     StateVersion,
     StateVersionOpts,
 )

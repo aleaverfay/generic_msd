@@ -5,7 +5,7 @@ from generic_msd.msd_interface_design import (
     StateVersion,
     DesignDefinitionOpts,
     StateVersionOpts,
-    DesDefFnames,
+    IsolateBBDesDefFnames,
     PostProcessingOpts,
 )
 from generic_msd.tests.dummy_desdef import dummy_design_species
@@ -43,9 +43,9 @@ class H3H4InterfaceMSDJob(InterfaceMSDJob):
     def create_design_species(self) -> DesignSpecies:
         return dummy_design_species()
 
-    def create_desdef_fnames(self, design_species: DesignSpecies) -> DesDefFnames:
+    def create_desdef_fnames(self, design_species: DesignSpecies) -> IsolateBBDesDefFnames:
         dd_opts = DesignDefinitionOpts(self.all_opts)
-        return DesDefFnames(dd_opts, design_species)
+        return IsolateBBDesDefFnames(dd_opts, design_species)
 
     def create_state_version(self, design_species: DesignSpecies) -> StateVersion:
         sv_opts = StateVersionOpts(self.all_opts)

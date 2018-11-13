@@ -233,7 +233,7 @@ class MSDJobManager:
         # and I'd like to avoid duplicating any "what's the base_dir" logic.
         dock_jobs_command = [
             "python3",
-            self.base_dir + "pyscripts/dock_jobs_run.py",
+            os.path.join(self.base_dir, "pyscripts/dock_jobs_run.py"),
             "--pdb-triples",
             "complex_sets.list",
             self.msd_job.post_processing_opts.to_command_line(),
@@ -253,7 +253,7 @@ class MSDJobManager:
 
         dock_jobs_view_command_line = " ".join([
             "python3",
-            self.base_dir + "pyscripts/dock_jobs_view.py",
+            os.path.join(self.base_dir, "pyscripts/dock_jobs_view.py"),
             "-l complex_sets.list -o after_docking_dGbind.txt",
             self.msd_job.post_processing_opts.to_command_line(),
             ])
@@ -266,7 +266,7 @@ class MSDJobManager:
         #        fid.writelines(dock_jobs_view_submission_command)
         dock_jobs_view_submission_command = [
             "python3",
-            pyscripts_path(self.si) + "submit_dependent_script.py",
+            os.path.join(pyscripts_path(self.si), "submit_dependent_script.py"),
             "dock/dock_submission.log",
             dock_jobs_view_command_line,
             "\n",
@@ -302,7 +302,7 @@ class MSDJobManager:
                 " ".join(
                     [
                         "python3",
-                        pyscripts_path(self.si) + "submit_dependent_script.py",
+                        os.path.join(pyscripts_path(self.si), "submit_dependent_script.py"),
                         "msd_submission.log launch_docking.sh\n",
                     ]
                 )

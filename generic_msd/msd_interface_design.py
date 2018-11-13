@@ -25,6 +25,12 @@ class DesignDefinitionOpts:
 
 
 class DesignSpecies:
+    def species(self):
+        """Return a list of strings representing all the species in the system"""
+        raise NotImplementedError()
+
+
+class IsolateBBDesignSpecies(DesignSpecies):
     """Derived DesignSpecies classes identify what species are being modeled
     and whether those species are complexes or separated complexes and
     whether those species are positive or negative species"""
@@ -64,7 +70,8 @@ class DesignSpecies:
 
 class DesDefFnames:
     """The DesDefFNames class loads the information for each species about the
-    correspondence file and secondary resfile that should be used for it. It
+    correspondence file and secondary resfile that should be used for it. It loads
+    the name of the entity resfile that will be used. It
     also stores the entity function that should be used (if any)"""
 
     def __init__(self, opts: DesignDefinitionOpts, design_species: DesignSpecies):
@@ -78,7 +85,20 @@ class DesDefFnames:
         self.secresfiles = {}
         self.entfunc = ""
         self.species = design_species
-        fname = self.desdef_dir + "definition_files.txt"
+        self.n_entities = 0
+
+
+
+
+class IsolateBBDesDefFnames(DesDefFnames):
+    """The DesDefFNames class loads the information for each species about the
+    correspondence file and secondary resfile that should be used for it. It
+    also stores the entity function that should be used (if any)"""
+
+    def __init__(self, opts: DesignDefinitionOpts, design_species: DesignSpecies):
+        super(IsolateBBDesDefFnames,self).__init__(opts, design_species)
+
+        fname = os.path.join(self.desdef_dir, "definition_files.txt")
         with open(fname) as fid:
             lines = fid.readlines()
         self._read_from_lines(fname, lines)
@@ -130,7 +150,7 @@ class DesDefFnames:
                 )
 
     def _read_nentities_from_entity_resfile(self):
-        with open(self.desdef_dir + "entity.resfile") as fid:
+        with open(os.path.join(self.desdef_dir, "entity.resfile")) as fid:
             lines = fid.readlines()
         return int(lines[0].strip())
 
@@ -174,14 +194,22 @@ class StateVersion:
     complex PDB should be listed for PDBs in this file -- the separated
     complex PDB that it corresponds to will be the one for the same backbone
     listed in either the "pos_backbones.list" or "neg_backbones.list" files.
+
+    Notes -- things used by MSDInterfaceJob:
+    state_version_dir -- data member
+    design_species -- data member
+    backbone_names -- data member
+    state_file_name()
+    negbackbone_names -- data member
+    is_spec_and_bb_combo_valid()
+
     """
 
     def __init__(self, opts: StateVersionOpts, design_species: DesignSpecies):
-        self.state_version_dir = (
-            opts.base_dir
-            + "input_files/state_versions/"
-            + opts.state_version_dir
-            + ("" if opts.state_version_dir[-1] == "/" else "/")
+        self.state_version_dir = os.path.join(
+            opts.base_dir,
+            "input_files/state_versions/",
+            opts.state_version_dir
         )
         self.backbone_names = set([])
         self.negbackbone_names = set([])
@@ -272,8 +300,8 @@ class StateVersion:
         # print "create_state_file_list_for_spec_and_bb ", spec, bbname
         dirname = self.state_version_dir
         old_lines = None
-        if os.path.isfile(dirname + self.state_file_name(spec, bbname)):
-            old_lines = open(dirname + self.state_file_name(spec, bbname)).readlines()
+        if os.path.isfile(os.path.join(dirname, self.state_file_name(spec, bbname))):
+            old_lines = open(os.path.join(dirname,self.state_file_name(spec, bbname))).readlines()
         else:
             old_lines = []  # perhaps the file doesn't exist because it shouldn't exist
         lines = self.state_file_lines_for_spec_and_bb(spec, bbname)
@@ -281,7 +309,7 @@ class StateVersion:
             print(
                 "Writing list file for", self.state_file_name(spec, bbname), "species"
             )
-            open(dirname + self.state_file_name(spec, bbname), "w").writelines(lines)
+            open(os.path.join(dirname, self.state_file_name(spec, bbname)), "w").writelines(lines)
 
     def state_file_lines_for_spec_and_bb(self, spec, bbname):
         """This function will be given a species and then asked to
@@ -299,18 +327,16 @@ class StateVersion:
         is the name of the complex pdb ending with "_sep", then we'll ask
         the derived class to construct that pdb using the "separate_pdb"
         function, which should write the new pdb to disk"""
-        if not os.path.isfile(self.state_version_dir + "/" + complex_name):
+        if not os.path.isfile(os.path.join(self.state_version_dir,complex_name)):
             raise FileNotFoundError(
                 "Could not find file "
-                + self.state_version_dir
-                + "/"
-                + complex_name
+                + os.path.join(self.state_version_dir, complex_name)
                 + " which was given in "
                 + source
                 + "On the line: "
                 + line
             )
-        if not os.path.isfile(self.state_version_dir + "/" + separated):
+        if not os.path.isfile(os.path.join(self.state_version_dir, separated)):
             if (
                 len(separated) > 8
                 and separated[-4:] == ".pdb"
@@ -322,9 +348,7 @@ class StateVersion:
             else:
                 raise FileNotFoundError(
                     "Could not find file "
-                    + self.state_version_dir
-                    + "/"
-                    + separated
+                    + os.path.join(self.state_version_dir, separated)
                     + " which was given in "
                     + source
                     + "On the line: "
@@ -333,7 +357,7 @@ class StateVersion:
 
     def determine_pdbs_from_pos_backbones(self):
         dir = self.state_version_dir
-        pos_backbones = dir + "pos_backbones.list"
+        pos_backbones = os.path.join(dir,"pos_backbones.list")
         lines = [x.strip() for x in open(pos_backbones).readlines()]
         for line in lines:
             if len(line) == 0:
@@ -365,7 +389,7 @@ class StateVersion:
         """TO DO: Document format of the "neg_backbones.list" file"""
         dir = self.state_version_dir
         valid_statuses = self.valid_mut_statuses()
-        neg_backbones = dir + "neg_backbones.list"
+        neg_backbones = os.path.join(dir, "neg_backbones.list")
         if not os.path.isfile(neg_backbones):
             return
         lines = [x.strip() for x in open(neg_backbones).readlines()]
@@ -419,7 +443,7 @@ class StateVersion:
         """TO DO: Document the format of the "neg_complexes.list" file"""
         dir = self.state_version_dir
         valid_statuses = self.valid_mut_statuses()
-        neg_complexes = dir + "neg_complexes.list"
+        neg_complexes = os.path.join(dir, "neg_complexes.list")
         lines = [x.strip() for x in open(neg_complexes).readlines()]
         for line in lines:
             if len(line) == 0:
@@ -441,7 +465,7 @@ class StateVersion:
             bbname = cols[1]
             assert bbname in self.backbone_names or bbname in self.negbackbone_names
             complex_name = cols[2]
-            assert os.path.isfile(dir + "/" + complex_name)
+            assert os.path.isfile(os.path.join(dir,complex_name))
             self.add_negative_complex(mut_status, bbname, complex_name)
 
 
@@ -520,7 +544,7 @@ def resolve_abs_path(fname):
         return fname
     else:
         print(os.getcwd(), fname)
-        return "/".join([os.getcwd(), fname])
+        return os.path.join(os.getcwd(), fname)
 
 class InterfaceMSDJob:
 
@@ -630,38 +654,38 @@ class InterfaceMSDJob:
         desdefdir = self.desdef_fnames.desdef_dir
 
         for pdb in self.state_version.pdbs():
-            input_files.append((stateverdir + pdb, "."))
+            input_files.append((os.path.join(stateverdir, pdb), "."))
         for spec in self.state_version.design_species.species():
             for bb in self.state_version.backbone_names:
                 if not os.path.isfile(
-                    stateverdir + self.state_version.state_file_name(spec, bb)
+                    os.path.join(stateverdir, self.state_version.state_file_name(spec, bb))
                 ):
                     continue
                 input_files.append(
-                    (stateverdir + self.state_version.state_file_name(spec, bb), ".")
+                    (os.path.join(stateverdir, self.state_version.state_file_name(spec, bb)), ".")
                 )
             if self.design_species.is_negative_species(spec):
                 for bb in self.state_version.negbackbone_names:
                     if not os.path.isfile(
-                        stateverdir + self.state_version.state_file_name(spec, bb)
+                        os.path.join(stateverdir, self.state_version.state_file_name(spec, bb))
                     ):
                         continue
                     input_files.append(
                         (
-                            stateverdir + self.state_version.state_file_name(spec, bb),
+                            os.path.join(stateverdir, self.state_version.state_file_name(spec, bb)),
                             ".",
                         )
                     )
         for spec in self.design_species.species():
             input_files.append(
-                (desdefdir + self.desdef_fnames.corr[spec], spec + ".corr")
+                (os.path.join(desdefdir, self.desdef_fnames.corr[spec]), spec + ".corr")
             )
             input_files.append(
-                (desdefdir + self.desdef_fnames.secresfiles[spec], spec + ".2resfile")
+                (os.path.join(desdefdir, self.desdef_fnames.secresfiles[spec]), spec + ".2resfile")
             )
-        input_files.append((desdefdir + "entity.resfile", "."))
+        input_files.append((os.path.join(desdefdir, "entity.resfile"), "."))
         if self.desdef_fnames.entfunc != "":
-            input_files.append((desdefdir + self.desdef_fnames.entfunc, "."))
+            input_files.append((os.path.join(desdefdir, self.desdef_fnames.entfunc), "."))
 
         for fname in self.flags_files:
             if not os.path.isfile(fname):
@@ -712,12 +736,12 @@ class InterfaceMSDJob:
 
     def is_spec_and_bb_combo_valid(self, spec, bb):
         """Derived class is welcome to implement a faster version; hacky
-        version just asks "does the state file for this species and backbon
+        version just asks "does the state file for this species and backbone
         exist on the file system?" which is not a terribly efficient way
         of answering the question, and also requires that this be invoked
         only after the StateVersion has create all .states files"""
         state_file_name = self.state_version.state_file_name(spec, bb)
-        return os.path.isfile(self.state_version.state_version_dir + state_file_name)
+        return os.path.isfile(os.path.join(self.state_version.state_version_dir, state_file_name))
 
     def fitness_lines(self, subdir):
         """Default fitness function definition that will, from the state version,
@@ -832,7 +856,7 @@ class InterfaceMSDJob:
             for bb in self.state_version.backbone_names:
                 state_file_name = self.state_version.state_file_name(spec, bb)
                 if not os.path.isfile(
-                    self.state_version.state_version_dir + state_file_name
+                    os.path.join(self.state_version.state_version_dir, state_file_name)
                 ):
                     continue
                 line += "best_" + spec + "_" + bb + " "
@@ -840,7 +864,7 @@ class InterfaceMSDJob:
                 for bb in self.state_version.negbackbone_names:
                     state_file_name = self.state_version.state_file_name(spec, bb)
                     if not os.path.isfile(
-                        self.state_version.state_version_dir + state_file_name
+                        os.path.join(self.state_version.state_version_dir, state_file_name)
                     ):
                         continue
                     line += "best_" + spec + "_" + bb + " "
