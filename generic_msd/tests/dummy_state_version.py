@@ -2,14 +2,14 @@ from generic_msd.msd_interface_design import (
     DesignSpecies,
     DesignDefinitionOpts,
     IsolateBBDesDefFnames,
-    StateVersion,
+    IsolateBBStateVersion,
     StateVersionOpts,
 )
 
 
-class dummy_state_version(StateVersion):
+class dummy_state_version(IsolateBBStateVersion):
     def __init__(self, opts: StateVersionOpts, design_species: DesignSpecies):
-        super().__init__(opts, design_species)
+        super(dummy_state_version, self).__init__(opts, design_species)
         self.all_pdbs = set([])
         self.pos_states = {}
         self.sep_states_both_mut = {}

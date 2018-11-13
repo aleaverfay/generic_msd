@@ -66,7 +66,7 @@ def mpi_msd_exe(si: ServerIdentifier):
     assert server == KnownComputers.KILLDEVIL or server == KnownComputers.DOGWOOD
 
     return (
-        bin_dir(si) + "mpi_msd.mpi.linuxgccrelease"
+        bin_dir(si) + "mpi_msd.mpiserialization.linuxgccrelease"
         if server == KnownComputers.KILLDEVIL
         else bin_dir(si) + "mpi_msd.mpiserialization.linuxgccrelease"
     )

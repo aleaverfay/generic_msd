@@ -1,11 +1,11 @@
 from generic_msd.msd_interface_design import (
     MSDIntDesJobOptions,
-    InterfaceMSDJob,
-    DesignSpecies,
-    StateVersion,
+    IsolateBBInterfaceMSDJob,
+    IsolateBBDesignSpecies,
+    IsolateBBDesDefFnames,
+    IsolateBBStateVersion,
     DesignDefinitionOpts,
     StateVersionOpts,
-    IsolateBBDesDefFnames,
     PostProcessingOpts,
 )
 from generic_msd.tests.dummy_desdef import dummy_design_species
@@ -14,7 +14,7 @@ from generic_msd.opt_holder import OptHolder
 import blargs
 
 
-class H3H4InterfaceMSDJob(InterfaceMSDJob):
+class H3H4InterfaceMSDJob(IsolateBBInterfaceMSDJob):
     @staticmethod
     def add_options(p: blargs.Parser):
         DesignDefinitionOpts.add_options(p)
@@ -25,7 +25,7 @@ class H3H4InterfaceMSDJob(InterfaceMSDJob):
     def __init__(self, all_opts):
         self.all_opts = all_opts
         msd_opts = MSDIntDesJobOptions(all_opts)
-        super().__init__(msd_opts)
+        super(H3H4InterfaceMSDJob, self).__init__(msd_opts)
 
     def files_to_symlink(self, subdir):
         return super().files_to_symlink(subdir)
@@ -40,14 +40,14 @@ class H3H4InterfaceMSDJob(InterfaceMSDJob):
     ###################
     # Factory methods #
     ###################
-    def create_design_species(self) -> DesignSpecies:
+    def create_design_species(self) -> IsolateBBDesignSpecies:
         return dummy_design_species()
 
-    def create_desdef_fnames(self, design_species: DesignSpecies) -> IsolateBBDesDefFnames:
+    def create_desdef_fnames(self, design_species: IsolateBBDesignSpecies) -> IsolateBBDesDefFnames:
         dd_opts = DesignDefinitionOpts(self.all_opts)
         return IsolateBBDesDefFnames(dd_opts, design_species)
 
-    def create_state_version(self, design_species: DesignSpecies) -> StateVersion:
+    def create_state_version(self, design_species: IsolateBBDesignSpecies) -> IsolateBBStateVersion:
         sv_opts = StateVersionOpts(self.all_opts)
         return dummy_state_version(sv_opts, design_species)
 

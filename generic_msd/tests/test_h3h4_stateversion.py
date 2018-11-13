@@ -2,7 +2,7 @@ from generic_msd.msd_interface_design import (
     IsolateBBDesignSpecies,
     DesignDefinitionOpts,
     IsolateBBDesDefFnames,
-    StateVersion,
+    IsolateBBStateVersion,
     StateVersionOpts,
 )
 import generic_msd.tests.separate_h3h4_interface
@@ -42,7 +42,7 @@ def test_create_state_version():
 
     spec = dummy_design_species()
     fnames = IsolateBBDesDefFnames(desdef_opts, spec)
-    state_ver = StateVersion(state_ver_opts, spec)
+    state_ver = IsolateBBStateVersion(state_ver_opts, spec)
 
     assert hasattr(state_ver, "backbone_names")
     assert hasattr(state_ver, "negbackbone_names")

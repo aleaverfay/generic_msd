@@ -156,9 +156,26 @@ class IsolateBBDesDefFnames(DesDefFnames):
 
 
 class StateVersion:
-    """Derived StateVersion classes must track which backbone should be used for
+    def __init__(self, opts: StateVersionOpts, design_species: DesignSpecies):
+        self.state_version_dir = os.path.join(
+            opts.base_dir,
+            "input_files/state_versions/",
+            opts.state_version_dir
+        )
+        self.design_species = design_species
+
+    def nstates_total():
+        raise NotImplementedError()
+
+    def pdbs(self):
+        """Return the complete list of all PDBs (without their path) that are to
+        be used in the design simulation"""
+        raise NotImplementedError()
+
+class IsolateBBStateVersion(StateVersion):
+    """Derived IsolateBBStateVersion classes must track which backbone should be used for
     which species so that the .states files can be constructed. It will rely
-    on the DesignSpecies class to identify which are positive and which are
+    on the IsolateBBDesignSpecies class to identify which are positive and which are
     negative states. The base class will read three files in the state-version
     directory that state what PDB should be used in which context: the
     "pos_backbones.list" file, the "neg_complexes.list" file and the
@@ -194,26 +211,12 @@ class StateVersion:
     complex PDB should be listed for PDBs in this file -- the separated
     complex PDB that it corresponds to will be the one for the same backbone
     listed in either the "pos_backbones.list" or "neg_backbones.list" files.
-
-    Notes -- things used by MSDInterfaceJob:
-    state_version_dir -- data member
-    design_species -- data member
-    backbone_names -- data member
-    state_file_name()
-    negbackbone_names -- data member
-    is_spec_and_bb_combo_valid()
-
     """
 
-    def __init__(self, opts: StateVersionOpts, design_species: DesignSpecies):
-        self.state_version_dir = os.path.join(
-            opts.base_dir,
-            "input_files/state_versions/",
-            opts.state_version_dir
-        )
+    def __init__(self, opts: StateVersionOpts, design_species: IsolateBBDesignSpecies):
+        super(IsolateBBStateVersion, self).__init__(opts, design_species)
         self.backbone_names = set([])
         self.negbackbone_names = set([])
-        self.design_species = design_species
         self._pdbs_determined = False
 
     ###############################################
@@ -559,7 +562,7 @@ class InterfaceMSDJob:
         return self.default_subjobs()
 
     def files_to_symlink(self, subdir):
-        return self.default_symlinkable_file_list()
+        raise NotImplementedError()
 
     def popsize(self):
         return self.pop_size_
@@ -591,11 +594,12 @@ class InterfaceMSDJob:
     def n_results_to_postprocess(self):
         return self.ntop_msd_results_to_dock
 
-    # ALSO invoked by the MSDJobManager:
-    # fitness_lines
+    def fitness_lines(self, subdir):
+        raise NotImplementedError()
+
 
     #######################################################
-    # Interface between base class and derived class
+    # Interface between base class and concrete derived class
     #######################################################
 
     def create_design_species(self) -> DesignSpecies:
@@ -637,10 +641,63 @@ class InterfaceMSDJob:
         self.fill_gen1_from_seeds_ = msd_opts.fill_gen1_from_seeds
         self.pop_size_ = msd_opts.pop_size
 
+    def entfunc_weights_from_file(self):
+        if self.entfunc_weights_file != "":
+            with open(self.entfunc_weights_file) as fid:
+                lines = fid.readlines()
+            entfunc_weights = [float(line.strip()) for line in lines]
+        else:
+            entfunc_weights = [1.0]
+        return entfunc_weights
+
+    def dGdiff_bonus_weights_from_file(self):
+        if self.w_dGdiff_bonus_weights_file != "":
+            with open(self.w_dGdiff_bonus_weights_file) as fid:
+                lines = fid.readlines()
+            dGdiff_bonus_weights = [float(line.strip()) for line in lines]
+        else:
+            dGdiff_bonus_weights = [
+                float(x) for x in ("5", "10", "15", "20", "25", "30")
+            ]
+        return dGdiff_bonus_weights
+
+    def default_subjobs(self):
+        entfunc_weights = self.entfunc_weights_from_file()
+        dGdiff_bonus_weights = self.dGdiff_bonus_weights_from_file()
+
+        names = [
+            "{0}_{1:.1f}w_dGdiff_{2:.1f}Ent".format(self.job_name_, w_dGdiff, w_entfunc)
+            for w_dGdiff in dGdiff_bonus_weights
+            for w_entfunc in entfunc_weights
+        ]
+
+        return names
+
+    def dG_bonus_weight_from_subdir_name(self, subdir):
+        cols = subdir.split("_")
+        return float(cols[-3][:-1])
+
+    def entfunc_weight_from_subdir_name(self, subdir):
+        cols = subdir.split("_")
+        return float(cols[-1][:-3])
+
+
+
+class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
+
+    def __init__(self, msd_opts: MSDIntDesJobOptions):
+        super(IsolateBBInterfaceMSDJob, self).__init__(msd_opts)
+        assert isinstance(self.design_species, IsolateBBDesignSpecies)
+        assert isinstance(self.desdef_fnames, IsolateBBDesDefFnames)
+        assert isinstance(self.state_version, IsolateBBStateVersion)
+
+    def files_to_symlink(self, subdir):
+        return self.default_symlinkable_file_list()
+
+
     def default_symlinkable_file_list(self):
         """Setup the list of symlinked files that are defined by the state
         version, the design definition, and the flags files
-
 
         returns a list of tuples:
         0: original file path+name, and
@@ -693,46 +750,6 @@ class InterfaceMSDJob:
 
         input_files.extend([(fname, ".") for fname in self.flags_files])
         return input_files
-
-    def entfunc_weights_from_file(self):
-        if self.entfunc_weights_file != "":
-            with open(self.entfunc_weights_file) as fid:
-                lines = fid.readlines()
-            entfunc_weights = [float(line.strip()) for line in lines]
-        else:
-            entfunc_weights = [1.0]
-        return entfunc_weights
-
-    def dGdiff_bonus_weights_from_file(self):
-        if self.w_dGdiff_bonus_weights_file != "":
-            with open(self.w_dGdiff_bonus_weights_file) as fid:
-                lines = fid.readlines()
-            dGdiff_bonus_weights = [float(line.strip()) for line in lines]
-        else:
-            dGdiff_bonus_weights = [
-                float(x) for x in ("5", "10", "15", "20", "25", "30")
-            ]
-        return dGdiff_bonus_weights
-
-    def default_subjobs(self):
-        entfunc_weights = self.entfunc_weights_from_file()
-        dGdiff_bonus_weights = self.dGdiff_bonus_weights_from_file()
-
-        names = [
-            "{0}_{1:.1f}w_dGdiff_{2:.1f}Ent".format(self.job_name_, w_dGdiff, w_entfunc)
-            for w_dGdiff in dGdiff_bonus_weights
-            for w_entfunc in entfunc_weights
-        ]
-
-        return names
-
-    def dG_bonus_weight_from_subdir_name(self, subdir):
-        cols = subdir.split("_")
-        return float(cols[-3][:-1])
-
-    def entfunc_weight_from_subdir_name(self, subdir):
-        cols = subdir.split("_")
-        return float(cols[-1][:-3])
 
     def is_spec_and_bb_combo_valid(self, spec, bb):
         """Derived class is welcome to implement a faster version; hacky
