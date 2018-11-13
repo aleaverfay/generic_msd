@@ -30,6 +30,280 @@ class DesignSpecies:
         raise NotImplementedError()
 
 
+class DesDefFnames:
+    """The DesDefFNames class loads the information for each species about the
+    correspondence file and secondary resfile that should be used for it. It loads
+    the name of the entity resfile that will be used. It
+    also stores the entity function that should be used (if any)"""
+
+    def __init__(self, opts: DesignDefinitionOpts, design_species: DesignSpecies):
+        self.desdef_dir = (
+            opts.base_dir
+            + "input_files/design_definitions/"
+            + opts.des_def
+            + ("" if opts.des_def[-1] == "/" else "/")
+        )
+        self.corr = {}
+        self.secresfiles = {}
+        self.entfunc = ""
+        self.species = design_species
+        self.n_entities = 0
+
+
+
+class StateVersion:
+    def __init__(self, opts: StateVersionOpts, design_species: DesignSpecies):
+        self.state_version_dir = os.path.join(
+            opts.base_dir,
+            "input_files/state_versions/",
+            opts.state_version_dir
+        )
+        self.design_species = design_species
+
+    def nstates_total():
+        raise NotImplementedError()
+
+    def pdbs(self):
+        """Return the complete list of all PDBs (without their path) that are to
+        be used in the design simulation"""
+        raise NotImplementedError()
+
+
+# class DesignDefinition:
+#    """Base class from which particular design defintion classes will derive"""
+#
+#    pass
+
+
+class MSDIntDesJobOptions:
+    def __init__(self, cl_opts):
+        self.base_dir = cl_opts.base_dir
+        self.ntop_msd_results_to_dock = cl_opts.ntop_msd_results_to_dock
+        self.job_name = cl_opts.job_name
+        self.flags_files = cl_opts.flags_files
+        self.w_dGdiff_bonus_weights_file = cl_opts.w_dGdiff_bonus_weights_file
+        self.daf = cl_opts.daf
+        self.entfunc_weights_file = cl_opts.entfunc_weights_file
+        self.preserve_DAF = cl_opts.preserve_DAF
+        self.positive_states = cl_opts.positive_states
+        self.ngen_scale = cl_opts.ngen_scale
+        self.seed_sequences = cl_opts.seed_sequences
+        self.pdb_seed_pairs = cl_opts.pdb_seed_pairs
+        self.single_round = cl_opts.single_round
+        self.fill_gen1_from_seeds = cl_opts.fill_gen1_from_seeds
+        self.pop_size = cl_opts.pop_size
+
+    @staticmethod
+    def add_options(blargs_parser: blargs.Parser):
+        p = blargs_parser
+        p.int("ntop_msd_results_to_dock").default(1)
+        p.str("job_name").shorthand("j").required()
+        p.multiword("flags_files").shorthand("f").default("").cast(lambda x: x.split())
+        p.str("w_dGdiff_bonus_weights_file").shorthand("w").required()
+        p.str("daf").shorthand("a").required()
+        p.str("entfunc_weights_file").shorthand("e").required()
+        p.flag("preserve_DAF").shorthand("p")
+        p.str("positive_states").default("")
+        p.float("ngen_scale").default(15)
+        ss = p.multiword("seed_sequences").cast(lambda x: x.split())
+        p.multiword("pdb_seed_pairs").cast(lambda x: x.split()).conflicts(ss)
+        sr = p.flag("single_round")
+        p.flag("fill_gen1_from_seeds").conflicts(sr)
+        p.int("pop_size").default(100)
+
+
+class PostProcessingOpts:
+    def __init__(self, cl_opts):
+        self.base_dir = cl_opts.base_dir
+        self.docking_flags_files = cl_opts.docking_flags_files
+        self.relax = cl_opts.relax
+        self.docking_n_cpu = cl_opts.docking_n_cpu
+
+    def to_command_line(self):
+        args = []
+        if self.docking_flags_files:
+            args.append("--docking_flags_files")
+            args.extend(self.docking_flags_files)
+        if self.relax:
+            args.append("--relax")
+        args.append("--docking_n_cpu")
+        args.append(str(self.docking_n_cpu))
+        return " ".join(args)
+
+    @staticmethod
+    def add_options(blargs_parser: blargs.Parser):
+        p = blargs_parser
+        p.multiword("docking_flags_files").default("").cast(
+            lambda x: x.split()
+        )
+        p.flag("relax")
+        p.int("docking_n_cpu").default(45)
+
+def resolve_abs_path(fname):
+    if len(fname) > 0 and fname[0] == "/":
+        return fname
+    else:
+        print(os.getcwd(), fname)
+        return os.path.join(os.getcwd(), fname)
+
+class InterfaceMSDJob:
+
+    ##########################################
+    # interface presented to the MSDJobManager
+    ##########################################
+
+    def job_name(self):
+        return self.job_name_
+
+    def subjobs(self):
+        return self.default_subjobs()
+
+    def files_to_symlink(self, subdir):
+        raise NotImplementedError()
+
+    def popsize(self):
+        return self.pop_size_
+
+    def ngen(self):
+        """Default implementation scales the number of generations by the number of
+        designable positions, which is given by the design definition"""
+        return int(math.ceil(self.desdef_fnames.n_entities * self.ngen_scale))
+
+    def msd_flags(self, subdir):
+        return self.flags_files
+
+    def seeded(self, subdir):
+        return (
+            (self.seed_sequences and len(self.seed_sequences) != 0)
+            or (self.pdb_seed_pairs and len(self.pdb_seed_pairs) != 0)
+            or self.fill_gen1_from_seeds_
+        )
+
+    def fill_gen1_from_seeds(self):
+        return self.fill_gen1_from_seeds_
+
+    def states_to_save(self):
+        raise NotImplementedError()
+
+    def complexes_to_postprocess(self):
+        raise NotImplementedError()
+
+    def n_results_to_postprocess(self):
+        return self.ntop_msd_results_to_dock
+
+    def fitness_lines(self, subdir):
+        raise NotImplementedError()
+
+
+    #######################################################
+    # Interface between base class and concrete derived class
+    #######################################################
+
+    def create_design_species(self) -> DesignSpecies:
+        """Factory method for a derived DesignSpecies class"""
+        raise NotImplementedError()
+
+    def create_desdef_fnames(self, design_species: DesignSpecies) -> DesDefFnames:
+        """Factory method for a (possibly?) derived DesDefFNames class"""
+        raise NotImplementedError()
+
+    def create_state_version(self, design_species: DesignSpecies) -> StateVersion:
+        """Factory method for a derived StateVersion class"""
+        raise NotImplementedError()
+
+    def create_post_processing_options(self) -> PostProcessingOpts:
+        raise NotImplementedError()
+
+    ################
+
+    def __init__(self, msd_opts: MSDIntDesJobOptions):
+        self.design_species = self.create_design_species()
+        self.desdef_fnames = self.create_desdef_fnames(self.design_species)
+        self.state_version = self.create_state_version(self.design_species)
+        self.post_processing_opts = self.create_post_processing_options()
+
+        self.ntop_msd_results_to_dock = msd_opts.ntop_msd_results_to_dock
+        self.base_dir = msd_opts.base_dir
+        self.job_name_ = msd_opts.job_name
+        self.flags_files = [resolve_abs_path(x) for x in msd_opts.flags_files]
+        self.w_dGdiff_bonus_weights_file = resolve_abs_path(msd_opts.w_dGdiff_bonus_weights_file)
+        self.daf = msd_opts.daf
+        self.entfunc_weights_file = resolve_abs_path(msd_opts.entfunc_weights_file)
+        self.preserve_DAF = msd_opts.preserve_DAF
+        self.positive_states = msd_opts.positive_states
+        self.ngen_scale = msd_opts.ngen_scale
+        self.seed_sequences = msd_opts.seed_sequences
+        self.pdb_seed_pairs = msd_opts.pdb_seed_pairs
+        self.single_round = msd_opts.single_round
+        self.fill_gen1_from_seeds_ = msd_opts.fill_gen1_from_seeds
+        self.pop_size_ = msd_opts.pop_size
+
+    def entfunc_weights_from_file(self):
+        if self.entfunc_weights_file != "":
+            with open(self.entfunc_weights_file) as fid:
+                lines = fid.readlines()
+            entfunc_weights = [float(line.strip()) for line in lines]
+        else:
+            entfunc_weights = [1.0]
+        return entfunc_weights
+
+    def dGdiff_bonus_weights_from_file(self):
+        if self.w_dGdiff_bonus_weights_file != "":
+            with open(self.w_dGdiff_bonus_weights_file) as fid:
+                lines = fid.readlines()
+            dGdiff_bonus_weights = [float(line.strip()) for line in lines]
+        else:
+            dGdiff_bonus_weights = [
+                float(x) for x in ("5", "10", "15", "20", "25", "30")
+            ]
+        return dGdiff_bonus_weights
+
+    def default_subjobs(self):
+        entfunc_weights = self.entfunc_weights_from_file()
+        dGdiff_bonus_weights = self.dGdiff_bonus_weights_from_file()
+
+        names = [
+            "{0}_{1:.1f}w_dGdiff_{2:.1f}Ent".format(self.job_name_, w_dGdiff, w_entfunc)
+            for w_dGdiff in dGdiff_bonus_weights
+            for w_entfunc in entfunc_weights
+        ]
+
+        return names
+
+    def dG_bonus_weight_from_subdir_name(self, subdir):
+        cols = subdir.split("_")
+        return float(cols[-3][:-1])
+
+    def entfunc_weight_from_subdir_name(self, subdir):
+        cols = subdir.split("_")
+        return float(cols[-1][:-3])
+
+############################################################################################
+############################################################################################
+############################################################################################
+### The idea of the "IsolateBB" classes is that they are going to wrap up a set of MSD jobs
+### that only compare energies between two states if they come from the "same backbone"
+### i.e. the internal DOFs of their backbones are identical. This will allow you to compare
+### the energies between the complex and separated-complex, e.g., to determine a binding
+### energy.
+###
+### For each backbone, there is a "complex" and a "separated complex" pair. The different
+### species will be thread across these pairs to allow a binding energy for that species
+### on that backbone. It is possible to have many different rigid-body docked orientations
+### for a particular backbone, so that a single state for the separated complex may be used
+### (it would be expensive/wasteful to have a state for each of the complexes that differ
+### only by their rigid-body orientation). If there is only a single backbone (e.g. the
+### wild type backbone), that is simply handled as a special case of there being multiple
+### backbones.
+###
+### The fitness functions will often look to the complex with the largest binding energy.
+###
+### The IsolateBBInterfaceMSDJob class will generate a large portion of the fitness-
+### function file, reading from the state version class to list all of the different
+### backbones for a species, and then to define dG_bind values for each backbone/species
+### combo, putting all of the dGbinds into a vector variable (vdGbind_<complex>).
+
+
 class IsolateBBDesignSpecies(DesignSpecies):
     """Derived DesignSpecies classes identify what species are being modeled
     and whether those species are complexes or separated complexes and
@@ -66,28 +340,6 @@ class IsolateBBDesignSpecies(DesignSpecies):
     def complexes(self):
         """Return the list of species that represent complexes"""
         return [spec for spec in self.species() if not self.is_separated_species(spec)]
-
-
-class DesDefFnames:
-    """The DesDefFNames class loads the information for each species about the
-    correspondence file and secondary resfile that should be used for it. It loads
-    the name of the entity resfile that will be used. It
-    also stores the entity function that should be used (if any)"""
-
-    def __init__(self, opts: DesignDefinitionOpts, design_species: DesignSpecies):
-        self.desdef_dir = (
-            opts.base_dir
-            + "input_files/design_definitions/"
-            + opts.des_def
-            + ("" if opts.des_def[-1] == "/" else "/")
-        )
-        self.corr = {}
-        self.secresfiles = {}
-        self.entfunc = ""
-        self.species = design_species
-        self.n_entities = 0
-
-
 
 
 class IsolateBBDesDefFnames(DesDefFnames):
@@ -155,22 +407,6 @@ class IsolateBBDesDefFnames(DesDefFnames):
         return int(lines[0].strip())
 
 
-class StateVersion:
-    def __init__(self, opts: StateVersionOpts, design_species: DesignSpecies):
-        self.state_version_dir = os.path.join(
-            opts.base_dir,
-            "input_files/state_versions/",
-            opts.state_version_dir
-        )
-        self.design_species = design_species
-
-    def nstates_total():
-        raise NotImplementedError()
-
-    def pdbs(self):
-        """Return the complete list of all PDBs (without their path) that are to
-        be used in the design simulation"""
-        raise NotImplementedError()
 
 class IsolateBBStateVersion(StateVersion):
     """Derived IsolateBBStateVersion classes must track which backbone should be used for
@@ -470,216 +706,6 @@ class IsolateBBStateVersion(StateVersion):
             complex_name = cols[2]
             assert os.path.isfile(os.path.join(dir,complex_name))
             self.add_negative_complex(mut_status, bbname, complex_name)
-
-
-# class DesignDefinition:
-#    """Base class from which particular design defintion classes will derive"""
-#
-#    pass
-
-
-class MSDIntDesJobOptions:
-    def __init__(self, cl_opts):
-        self.base_dir = cl_opts.base_dir
-        self.ntop_msd_results_to_dock = cl_opts.ntop_msd_results_to_dock
-        self.job_name = cl_opts.job_name
-        self.flags_files = cl_opts.flags_files
-        self.w_dGdiff_bonus_weights_file = cl_opts.w_dGdiff_bonus_weights_file
-        self.daf = cl_opts.daf
-        self.entfunc_weights_file = cl_opts.entfunc_weights_file
-        self.preserve_DAF = cl_opts.preserve_DAF
-        self.positive_states = cl_opts.positive_states
-        self.ngen_scale = cl_opts.ngen_scale
-        self.seed_sequences = cl_opts.seed_sequences
-        self.pdb_seed_pairs = cl_opts.pdb_seed_pairs
-        self.single_round = cl_opts.single_round
-        self.fill_gen1_from_seeds = cl_opts.fill_gen1_from_seeds
-        self.pop_size = cl_opts.pop_size
-
-    @staticmethod
-    def add_options(blargs_parser: blargs.Parser):
-        p = blargs_parser
-        p.int("ntop_msd_results_to_dock").default(1)
-        p.str("job_name").shorthand("j").required()
-        p.multiword("flags_files").shorthand("f").default("").cast(lambda x: x.split())
-        p.str("w_dGdiff_bonus_weights_file").shorthand("w").required()
-        p.str("daf").shorthand("a").required()
-        p.str("entfunc_weights_file").shorthand("e").required()
-        p.flag("preserve_DAF").shorthand("p")
-        p.str("positive_states").default("")
-        p.float("ngen_scale").default(15)
-        ss = p.multiword("seed_sequences").cast(lambda x: x.split())
-        p.multiword("pdb_seed_pairs").cast(lambda x: x.split()).conflicts(ss)
-        sr = p.flag("single_round")
-        p.flag("fill_gen1_from_seeds").conflicts(sr)
-        p.int("pop_size").default(100)
-
-
-class PostProcessingOpts:
-    def __init__(self, cl_opts):
-        self.base_dir = cl_opts.base_dir
-        self.docking_flags_files = cl_opts.docking_flags_files
-        self.relax = cl_opts.relax
-        self.docking_n_cpu = cl_opts.docking_n_cpu
-
-    def to_command_line(self):
-        args = []
-        if self.docking_flags_files:
-            args.append("--docking_flags_files")
-            args.extend(self.docking_flags_files)
-        if self.relax:
-            args.append("--relax")
-        args.append("--docking_n_cpu")
-        args.append(str(self.docking_n_cpu))
-        return " ".join(args)
-
-    @staticmethod
-    def add_options(blargs_parser: blargs.Parser):
-        p = blargs_parser
-        p.multiword("docking_flags_files").default("").cast(
-            lambda x: x.split()
-        )
-        p.flag("relax")
-        p.int("docking_n_cpu").default(45)
-
-def resolve_abs_path(fname):
-    if len(fname) > 0 and fname[0] == "/":
-        return fname
-    else:
-        print(os.getcwd(), fname)
-        return os.path.join(os.getcwd(), fname)
-
-class InterfaceMSDJob:
-
-    ##########################################
-    # interface presented to the MSDJobManager
-    ##########################################
-
-    def job_name(self):
-        return self.job_name_
-
-    def subjobs(self):
-        return self.default_subjobs()
-
-    def files_to_symlink(self, subdir):
-        raise NotImplementedError()
-
-    def popsize(self):
-        return self.pop_size_
-
-    def ngen(self):
-        """Default implementation scales the number of generations by the number of
-        designable positions, which is given by the design definition"""
-        return int(math.ceil(self.desdef_fnames.n_entities * self.ngen_scale))
-
-    def msd_flags(self, subdir):
-        return self.flags_files
-
-    def seeded(self, subdir):
-        return (
-            (self.seed_sequences and len(self.seed_sequences) != 0)
-            or (self.pdb_seed_pairs and len(self.pdb_seed_pairs) != 0)
-            or self.fill_gen1_from_seeds_
-        )
-
-    def fill_gen1_from_seeds(self):
-        return self.fill_gen1_from_seeds_
-
-    def states_to_save(self):
-        raise NotImplementedError()
-
-    def complexes_to_postprocess(self):
-        raise NotImplementedError()
-
-    def n_results_to_postprocess(self):
-        return self.ntop_msd_results_to_dock
-
-    def fitness_lines(self, subdir):
-        raise NotImplementedError()
-
-
-    #######################################################
-    # Interface between base class and concrete derived class
-    #######################################################
-
-    def create_design_species(self) -> DesignSpecies:
-        """Factory method for a derived DesignSpecies class"""
-        raise NotImplementedError()
-
-    def create_desdef_fnames(self, design_species: DesignSpecies) -> DesDefFnames:
-        """Factory method for a (possibly?) derived DesDefFNames class"""
-        raise NotImplementedError()
-
-    def create_state_version(self, design_species: DesignSpecies) -> StateVersion:
-        """Factory method for a derived StateVersion class"""
-        raise NotImplementedError()
-
-    def create_post_processing_options(self) -> PostProcessingOpts:
-        raise NotImplementedError()
-
-    ################
-
-    def __init__(self, msd_opts: MSDIntDesJobOptions):
-        self.design_species = self.create_design_species()
-        self.desdef_fnames = self.create_desdef_fnames(self.design_species)
-        self.state_version = self.create_state_version(self.design_species)
-        self.post_processing_opts = self.create_post_processing_options()
-
-        self.ntop_msd_results_to_dock = msd_opts.ntop_msd_results_to_dock
-        self.base_dir = msd_opts.base_dir
-        self.job_name_ = msd_opts.job_name
-        self.flags_files = [resolve_abs_path(x) for x in msd_opts.flags_files]
-        self.w_dGdiff_bonus_weights_file = resolve_abs_path(msd_opts.w_dGdiff_bonus_weights_file)
-        self.daf = msd_opts.daf
-        self.entfunc_weights_file = resolve_abs_path(msd_opts.entfunc_weights_file)
-        self.preserve_DAF = msd_opts.preserve_DAF
-        self.positive_states = msd_opts.positive_states
-        self.ngen_scale = msd_opts.ngen_scale
-        self.seed_sequences = msd_opts.seed_sequences
-        self.pdb_seed_pairs = msd_opts.pdb_seed_pairs
-        self.single_round = msd_opts.single_round
-        self.fill_gen1_from_seeds_ = msd_opts.fill_gen1_from_seeds
-        self.pop_size_ = msd_opts.pop_size
-
-    def entfunc_weights_from_file(self):
-        if self.entfunc_weights_file != "":
-            with open(self.entfunc_weights_file) as fid:
-                lines = fid.readlines()
-            entfunc_weights = [float(line.strip()) for line in lines]
-        else:
-            entfunc_weights = [1.0]
-        return entfunc_weights
-
-    def dGdiff_bonus_weights_from_file(self):
-        if self.w_dGdiff_bonus_weights_file != "":
-            with open(self.w_dGdiff_bonus_weights_file) as fid:
-                lines = fid.readlines()
-            dGdiff_bonus_weights = [float(line.strip()) for line in lines]
-        else:
-            dGdiff_bonus_weights = [
-                float(x) for x in ("5", "10", "15", "20", "25", "30")
-            ]
-        return dGdiff_bonus_weights
-
-    def default_subjobs(self):
-        entfunc_weights = self.entfunc_weights_from_file()
-        dGdiff_bonus_weights = self.dGdiff_bonus_weights_from_file()
-
-        names = [
-            "{0}_{1:.1f}w_dGdiff_{2:.1f}Ent".format(self.job_name_, w_dGdiff, w_entfunc)
-            for w_dGdiff in dGdiff_bonus_weights
-            for w_entfunc in entfunc_weights
-        ]
-
-        return names
-
-    def dG_bonus_weight_from_subdir_name(self, subdir):
-        cols = subdir.split("_")
-        return float(cols[-3][:-1])
-
-    def entfunc_weight_from_subdir_name(self, subdir):
-        cols = subdir.split("_")
-        return float(cols[-1][:-3])
 
 
 
