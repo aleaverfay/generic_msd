@@ -3,6 +3,7 @@ import os
 import math
 import traceback
 import yaml
+import itertools
 
 
 class StateVersionOpts:
@@ -1111,15 +1112,18 @@ class MergeBBInterfaceMSDJob(InterfaceMSDJob):
                 (
                     os.path.join(
                         self.desdef_fnames.desdef_dir, self.desdef_fnames.entfunc
-                    )
+                    ),
+                    "."
                 )
             )
 
-        return list(
+        retlist = list(
             itertools.chain(
-                pdb_state_and_flag_pairs, corr_pairs, secres_pairs, flags, extras
+                pdb_state_and_flag_pairs, corr_pairs, secres_pairs, extras
             )
         )
+        print(retlist)
+        return retlist
 
     def states_to_save(self):
         """Instruct the MSD job manager to save all species by default"""
