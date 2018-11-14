@@ -281,7 +281,7 @@ class InterfaceMSDJob:
         cols = subdir.split("_")
         return float(cols[-1][:-3])
 
-    def repace_wscan_and_add_entfunc_to_fitness_func(self, orig_lines):
+    def replace_wscan_and_add_entfunc_to_fitness_func(self, subdir, orig_lines):
         """Replace the WSCAN and add in an ENTITY_FUNCTION line ahead of the FITNESS line
         if the design definition files includes and entity function."""
 
@@ -974,7 +974,7 @@ class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
         # note: stale # vMH3_p_MH4, vMH3_p_WTH4, vWTH3_p_MH4
         # note: stale # vdGbind_MH3_MH4, vdGBind_MH3_WTH4, vdGBind_WTH3_MH4
 
-        remainder = self.repace_wscan_and_add_entfunc_to_fitness_func(orig_lines)
+        remainder = self.replace_wscan_and_add_entfunc_to_fitness_func(subdir, orig_lines)
 
         return newlines + remainder
 
@@ -1052,20 +1052,20 @@ class MergeBBStateVersion(StateVersion):
             self.count_n_states += 1
             spec = entry["species"]
             pdb = entry["pdb"]
-            assert spec in self.species.species()
-            assert os.path.isfile(os.join(self.state_version_dir, pdb))
-            if spec not in self.states:
+            assert spec in self.design_species.species()
+            assert os.path.isfile(os.path.join(self.state_version_dir, pdb))
+            if spec not in self.pdbs_for_spec:
                 self.pdbs_for_spec[spec] = []
             self.pdbs_for_spec[spec].append(pdb)
             self.all_pdbs.add(pdb)
 
         # now, let's write the .states files if we haven't done so already
-        for spec in self.species.species():
+        for spec in self.design_species.species():
             states_fname = os.path.join(self.state_version_dir, spec + ".states")
             if not os.path.isfile(states_fname):
                 lines = []
                 for pdb in self.pdbs_for_spec[spec]:
-                    lines.append("%s %s %s\n" % (pdb, spec + ".corr", spec + ".2res"))
+                    lines.append("%s %s %s\n" % (pdb, spec + ".corr", spec + ".2resfile"))
                 with open(states_fname, "w") as fid:
                     fid.writelines(lines)
 
@@ -1144,4 +1144,4 @@ class MergeBBInterfaceMSDJob(InterfaceMSDJob):
 
         with open(self.daf) as fid:
             orig_lines = fid.readlines()
-        return self.repace_wscan_and_add_entfunc_to_fitness_func(orig_lines)
+        return self.replace_wscan_and_add_entfunc_to_fitness_func(subdir, orig_lines)

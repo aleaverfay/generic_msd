@@ -38,7 +38,7 @@ def test_desdef_fnames():
     fnames1 = IsolateBBDesDefFnames(desdef_opts1, spec)
     assert (
         fnames1.desdef_dir
-        == basedir + "input_files/design_definitions/desdef1_only_hphobes/"
+        == basedir + "input_files/design_definitions/desdef1_only_hphobes"
     )
     fnames2 = IsolateBBDesDefFnames(desdef_opts2, spec)
     assert (

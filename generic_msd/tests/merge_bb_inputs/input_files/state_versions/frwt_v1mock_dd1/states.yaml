@@ -1,0 +1,16 @@
+pdbs:
+  - {species: MH3_MH4,  pdb: 1KX5_chAB_0331.pdb}
+  - {species: MH3_MH4,  pdb: 1KX5_chAB_0982.pdb}
+  - {species: WTH3_MH4, pdb: 1KX5_chAB_0331.pdb}
+  - {species: WTH3_MH4, pdb: 1KX5_chAB_0982.pdb}
+  - {species: MH3_WTH4, pdb: 1KX5_chAB_0331.pdb}
+  - {species: MH3_WTH4, pdb: 1KX5_chAB_0982.pdb}
+  - {species: MH3_WTH4, pdb: dock_test_frwt_v0_dd1_ff1a_run2_1dG_1.0Ent_3_MH3_WTH4.pdb}
+  - {species: MH3_WTH4, pdb: dock_test_frwt_v0_dd1_ff1a_run2_1dG_1.0Ent_6_MH3_WTH4.pdb}
+  - {species: WTH3_MH4, pdb: dock_test_frwt_v0_dd1_ff1a_run2_1dG_1.0Ent_6_WTH3_MH4.pdb}
+  - {species: WTH3_MH4, pdb: dock_test_frwt_v0_dd1_ff1a_run2_1dG_1.0Ent_2_WTH3_MH4.pdb}
+  - {species: MH3,      pdb: 1KX5_chAB_0331.pdb}
+  - {species: MH3,      pdb: 1KX5_chAB_0982.pdb}
+  - {species: MH4,      pdb: 1KX5_chAB_0331.pdb}
+  - {species: MH4,      pdb: 1KX5_chAB_0982.pdb}
+

@@ -2,7 +2,7 @@ from generic_msd.msd_interface_design import MergeBBDesignSpecies, MergeBBDesDef
 
 class MergeH3H4DesignSpecies(MergeBBDesignSpecies):
     def species(self):
-        return [ "MH3_MH4", "MH3_WTH4", "WTH3_MH4", "MH3", "MH4", "WTH3", "WTH4" ]
+        return [ "MH3_MH4", "MH3_WTH4", "WTH3_MH4", "MH3", "MH4" ]
     def is_complex(self, spec):
         return "_" in spec
     def is_monomer(self, spec):
