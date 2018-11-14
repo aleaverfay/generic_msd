@@ -56,14 +56,10 @@ class DesDefFnames:
         return int(lines[0].strip())
 
 
-
-
 class StateVersion:
     def __init__(self, opts: StateVersionOpts, design_species: DesignSpecies):
         self.state_version_dir = os.path.join(
-            opts.base_dir,
-            "input_files/state_versions/",
-            opts.state_version_dir
+            opts.base_dir, "input_files/state_versions/", opts.state_version_dir
         )
         self.design_species = design_species
 
@@ -140,11 +136,10 @@ class PostProcessingOpts:
     @staticmethod
     def add_options(blargs_parser: blargs.Parser):
         p = blargs_parser
-        p.multiword("docking_flags_files").default("").cast(
-            lambda x: x.split()
-        )
+        p.multiword("docking_flags_files").default("").cast(lambda x: x.split())
         p.flag("relax")
         p.int("docking_n_cpu").default(45)
+
 
 def resolve_abs_path(fname):
     if len(fname) > 0 and fname[0] == "/":
@@ -152,6 +147,7 @@ def resolve_abs_path(fname):
     else:
         print(os.getcwd(), fname)
         return os.path.join(os.getcwd(), fname)
+
 
 class InterfaceMSDJob:
 
@@ -201,7 +197,6 @@ class InterfaceMSDJob:
     def fitness_lines(self, subdir):
         raise NotImplementedError()
 
-
     #######################################################
     # Interface between base class and concrete derived class
     #######################################################
@@ -233,7 +228,9 @@ class InterfaceMSDJob:
         self.base_dir = msd_opts.base_dir
         self.job_name_ = msd_opts.job_name
         self.flags_files = [resolve_abs_path(x) for x in msd_opts.flags_files]
-        self.w_dGdiff_bonus_weights_file = resolve_abs_path(msd_opts.w_dGdiff_bonus_weights_file)
+        self.w_dGdiff_bonus_weights_file = resolve_abs_path(
+            msd_opts.w_dGdiff_bonus_weights_file
+        )
         self.daf = msd_opts.daf
         self.entfunc_weights_file = resolve_abs_path(msd_opts.entfunc_weights_file)
         self.preserve_DAF = msd_opts.preserve_DAF
@@ -284,6 +281,31 @@ class InterfaceMSDJob:
     def entfunc_weight_from_subdir_name(self, subdir):
         cols = subdir.split("_")
         return float(cols[-1][:-3])
+
+    def repace_wscan_and_add_entfunc_to_fitness_func(self, orig_lines):
+        """Replace the WSCAN and add in an ENTITY_FUNCTION line ahead of the FITNESS line
+        if the design definition files includes and entity function."""
+
+        dG_bonus_weight = self.dG_bonus_weight_from_subdir_name(subdir)
+        w_ent_func = self.entfunc_weight_from_subdir_name(subdir)
+        replace_dict = {"WSCAN": "%f" % dG_bonus_weight}
+
+        newlines = []
+        for line in orig_lines:
+            if line[0] != "#":
+                # append the entity function line to the input daf
+                if line[0:7] == "FITNESS" and self.desdef_fnames.entfunc:
+                    efunc_fname = self.desdef_fnames.entfunc
+                    if efunc_fname.find("/") != -1:
+                        efunc_fname = efunc_fname.rpartition("/")[2]
+                    newlines.append("ENTITY_FUNCTION entfunc " + efunc_fname + "\n")
+                    newlines.append("\n")
+                    line = line[:-1] + " + %f * entfunc\n" % w_ent_func
+                newlines.append(line % replace_dict)
+            else:
+                newlines.append(line)
+        return newlines
+
 
 ############################################################################################
 ############################################################################################
@@ -355,7 +377,7 @@ class IsolateBBDesDefFnames(DesDefFnames):
     also stores the entity function that should be used (if any)"""
 
     def __init__(self, opts: DesignDefinitionOpts, design_species: DesignSpecies):
-        super(IsolateBBDesDefFnames,self).__init__(opts, design_species)
+        super(IsolateBBDesDefFnames, self).__init__(opts, design_species)
 
         fname = os.path.join(self.desdef_dir, "definition_files.txt")
         with open(fname) as fid:
@@ -541,7 +563,9 @@ class IsolateBBStateVersion(StateVersion):
         dirname = self.state_version_dir
         old_lines = None
         if os.path.isfile(os.path.join(dirname, self.state_file_name(spec, bbname))):
-            old_lines = open(os.path.join(dirname,self.state_file_name(spec, bbname))).readlines()
+            old_lines = open(
+                os.path.join(dirname, self.state_file_name(spec, bbname))
+            ).readlines()
         else:
             old_lines = []  # perhaps the file doesn't exist because it shouldn't exist
         lines = self.state_file_lines_for_spec_and_bb(spec, bbname)
@@ -549,7 +573,9 @@ class IsolateBBStateVersion(StateVersion):
             print(
                 "Writing list file for", self.state_file_name(spec, bbname), "species"
             )
-            open(os.path.join(dirname, self.state_file_name(spec, bbname)), "w").writelines(lines)
+            open(
+                os.path.join(dirname, self.state_file_name(spec, bbname)), "w"
+            ).writelines(lines)
 
     def state_file_lines_for_spec_and_bb(self, spec, bbname):
         """This function will be given a species and then asked to
@@ -567,7 +593,7 @@ class IsolateBBStateVersion(StateVersion):
         is the name of the complex pdb ending with "_sep", then we'll ask
         the derived class to construct that pdb using the "separate_pdb"
         function, which should write the new pdb to disk"""
-        if not os.path.isfile(os.path.join(self.state_version_dir,complex_name)):
+        if not os.path.isfile(os.path.join(self.state_version_dir, complex_name)):
             raise FileNotFoundError(
                 "Could not find file "
                 + os.path.join(self.state_version_dir, complex_name)
@@ -597,7 +623,7 @@ class IsolateBBStateVersion(StateVersion):
 
     def determine_pdbs_from_pos_backbones(self):
         dir = self.state_version_dir
-        pos_backbones = os.path.join(dir,"pos_backbones.list")
+        pos_backbones = os.path.join(dir, "pos_backbones.list")
         lines = [x.strip() for x in open(pos_backbones).readlines()]
         for line in lines:
             if len(line) == 0:
@@ -705,13 +731,11 @@ class IsolateBBStateVersion(StateVersion):
             bbname = cols[1]
             assert bbname in self.backbone_names or bbname in self.negbackbone_names
             complex_name = cols[2]
-            assert os.path.isfile(os.path.join(dir,complex_name))
+            assert os.path.isfile(os.path.join(dir, complex_name))
             self.add_negative_complex(mut_status, bbname, complex_name)
 
 
-
 class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
-
     def __init__(self, msd_opts: MSDIntDesJobOptions):
         super(IsolateBBInterfaceMSDJob, self).__init__(msd_opts)
         assert isinstance(self.design_species, IsolateBBDesignSpecies)
@@ -720,7 +744,6 @@ class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
 
     def files_to_symlink(self, subdir):
         return self.default_symlinkable_file_list()
-
 
     def default_symlinkable_file_list(self):
         """Setup the list of symlinked files that are defined by the state
@@ -742,21 +765,33 @@ class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
         for spec in self.state_version.design_species.species():
             for bb in self.state_version.backbone_names:
                 if not os.path.isfile(
-                    os.path.join(stateverdir, self.state_version.state_file_name(spec, bb))
+                    os.path.join(
+                        stateverdir, self.state_version.state_file_name(spec, bb)
+                    )
                 ):
                     continue
                 input_files.append(
-                    (os.path.join(stateverdir, self.state_version.state_file_name(spec, bb)), ".")
+                    (
+                        os.path.join(
+                            stateverdir, self.state_version.state_file_name(spec, bb)
+                        ),
+                        ".",
+                    )
                 )
             if self.design_species.is_negative_species(spec):
                 for bb in self.state_version.negbackbone_names:
                     if not os.path.isfile(
-                        os.path.join(stateverdir, self.state_version.state_file_name(spec, bb))
+                        os.path.join(
+                            stateverdir, self.state_version.state_file_name(spec, bb)
+                        )
                     ):
                         continue
                     input_files.append(
                         (
-                            os.path.join(stateverdir, self.state_version.state_file_name(spec, bb)),
+                            os.path.join(
+                                stateverdir,
+                                self.state_version.state_file_name(spec, bb),
+                            ),
                             ".",
                         )
                     )
@@ -765,11 +800,16 @@ class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
                 (os.path.join(desdefdir, self.desdef_fnames.corr[spec]), spec + ".corr")
             )
             input_files.append(
-                (os.path.join(desdefdir, self.desdef_fnames.secresfiles[spec]), spec + ".2resfile")
+                (
+                    os.path.join(desdefdir, self.desdef_fnames.secresfiles[spec]),
+                    spec + ".2resfile",
+                )
             )
         input_files.append((os.path.join(desdefdir, "entity.resfile"), "."))
         if self.desdef_fnames.entfunc != "":
-            input_files.append((os.path.join(desdefdir, self.desdef_fnames.entfunc), "."))
+            input_files.append(
+                (os.path.join(desdefdir, self.desdef_fnames.entfunc), ".")
+            )
 
         for fname in self.flags_files:
             if not os.path.isfile(fname):
@@ -785,7 +825,9 @@ class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
         of answering the question, and also requires that this be invoked
         only after the StateVersion has create all .states files"""
         state_file_name = self.state_version.state_file_name(spec, bb)
-        return os.path.isfile(os.path.join(self.state_version.state_version_dir, state_file_name))
+        return os.path.isfile(
+            os.path.join(self.state_version.state_version_dir, state_file_name)
+        )
 
     def fitness_lines(self, subdir):
         """Default fitness function definition that will, from the state version,
@@ -803,15 +845,12 @@ class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
         override it in the derived class.
         """
         # def fitness_lines(orig_lines, desdefnames, statedef, opts, weight_bonus, w_ent_func):
-        dG_bonus_weight = self.dG_bonus_weight_from_subdir_name(subdir)
-        w_ent_func = self.entfunc_weight_from_subdir_name(subdir)
 
         orig_lines = None
         with open(self.daf) as fid:
             orig_lines = fid.readlines()
 
         newlines = []
-        replace_dict = {"WSCAN": "%f" % dG_bonus_weight}
         # header
         # declare the state vectors
 
@@ -908,7 +947,9 @@ class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
                 for bb in self.state_version.negbackbone_names:
                     state_file_name = self.state_version.state_file_name(spec, bb)
                     if not os.path.isfile(
-                        os.path.join(self.state_version.state_version_dir, state_file_name)
+                        os.path.join(
+                            self.state_version.state_version_dir, state_file_name
+                        )
                     ):
                         continue
                     line += "best_" + spec + "_" + bb + " "
@@ -934,26 +975,15 @@ class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
         # note: stale # vMH3_p_MH4, vMH3_p_WTH4, vWTH3_p_MH4
         # note: stale # vdGbind_MH3_MH4, vdGBind_MH3_WTH4, vdGBind_WTH3_MH4
 
-        for line in orig_lines:
-            if line[0] != "#":
-                # append the entity function line to the input daf
-                if line[0:7] == "FITNESS" and self.desdef_fnames.entfunc:
-                    efunc_fname = self.desdef_fnames.entfunc
-                    if efunc_fname.find("/") != -1:
-                        efunc_fname = efunc_fname.rpartition("/")[2]
-                    newlines.append("ENTITY_FUNCTION entfunc " + efunc_fname + "\n")
-                    newlines.append("\n")
-                    line = line[:-1] + " + %f * entfunc\n" % w_ent_func
-                newlines.append(line % replace_dict)
-            else:
-                newlines.append(line)
-        return newlines
+        remainder = self.repace_wscan_and_add_entfunc_to_fitness_func(orig_lines)
 
+        return newlines + remainder
 
 
 ###################################################################################
 ###################################################################################
 ###################################################################################
+
 
 class MergeBBDesignSpecies(DesignSpecies):
     """Derived MergeBBDesignSpecies classes identify a set of complexes and a set
@@ -989,12 +1019,12 @@ class MergeBBDesDefFnames(DesDefFnames):
         if "entfunc" in raw:
             self.entfunc = raw["entfunc"]
 
+
 class MergeBBStateVersion(StateVersion):
     def __init__(self, opts: StateVersionOpts, design_species: MergeBBDesignSpecies):
         super(MergeBBStateVersion, self).__init__(opts, design_species)
         self._determined_pdbs = False
         self.count_n_states = 0
-
 
     def pdbs(self):
         if not self._determined_pdbs:
@@ -1032,18 +1062,14 @@ class MergeBBStateVersion(StateVersion):
             if not os.path.isfile(states_fname):
                 lines = []
                 for pdb in self.pdbs_for_spec[spec]:
-                    lines.append( "%s %s %s\n" % (
-                            pdb,
-                            spec + ".corr",
-                            spec + ".2res"))
+                    lines.append("%s %s %s\n" % (pdb, spec + ".corr", spec + ".2res"))
                 with open(states_fname, "w") as fid:
                     fid.writelines(lines)
 
         self._determined_pdbs = True
-        
+
 
 class MergeBBInterfaceMSDJob(InterfaceMSDJob):
- 
     def __init__(self, msd_opts: MSDIntDesJobOptions):
         super(MergeBBInterfaceMSDJob, self).__init__(msd_opts)
         assert isinstance(self.design_species, MergeBBDesignSpecies)
@@ -1051,9 +1077,68 @@ class MergeBBInterfaceMSDJob(InterfaceMSDJob):
         assert isinstance(self.state_version, MergeBBStateVersion)
 
     def files_to_symlink(self, subdir):
-        pdbs = [os.path.join(self.state_version.state_version_dir,pdb) for pdb in self.state_version.pdbs()]
-        state_files = [spec + ".states" for spec in self.design_species.species()]
-        
-                
-            
+        species = self.design_species.species()
+        svdir = self.state_version.state_version_dir
+        pdbs = [os.path.join(svdir, pdb) for pdb in self.state_version.pdbs()]
+        state_files = [os.path.join(svdir, spec + ".states") for spec in species]
 
+        desdefdir = self.desdef_fnames.desdef_dir
+        corr_pairs = [
+            (os.path.join(desdefdir, self.desdef_fnames.corr[spec]), spec + ".corr")
+            for spec in species
+        ]
+        secres_pairs = [
+            (
+                os.path.join(desdefdir, self.desdef_fnames.secresfiles[spec]),
+                spec + ".2res",
+            )
+            for spec in species
+        ]
+
+        pdb_state_and_flag_pairs = [
+            (x, ".") for x in itertools.chain(pdbs, state_files, self.flags_files)
+        ]
+
+        extras = []
+        extras.append(
+            (os.path.join(self.desdef_fnames.desdef_dir, "entity.resfile"), ".")
+        )
+        if self.desdef_fnames.entfunc != "":
+            extras.append(
+                (
+                    os.path.join(
+                        self.desdef_fnames.desdef_dir, self.desdef_fnames.entfunc
+                    )
+                )
+            )
+
+        return list(
+            itertools.chain(
+                pdb_state_and_flag_pairs, corr_pairs, secres_pairs, flags, extras
+            )
+        )
+
+    def states_to_save(self):
+        """Instruct the MSD job manager to save all species by default"""
+        return self.design_species.species()
+
+    def complexes_to_postprocess(self):
+        """Post process all complexes"""
+        return [
+            spec
+            for spec in self.design_species.species()
+            if self.design_species.is_complex(spec)
+        ]
+
+    def fitness_lines(self, subdir):
+        """Replace the WSCAN and add in an ENTITY_FUNCTION line ahead of the FITNESS line
+        if the design definition files includes and entity function.
+
+        The MergeBBInterfaceMSDJob does a lot less fitness-function-boilerplate creation than
+        the IsolateBBInterfaceMSDJob does; the input fitness funcion should be basically
+        complete (and tailored specifically for the species listed in the MergeBBDesignSpecies)
+        needing only the weight and entity function addition."""
+
+        with open(self.daf) as fid:
+            orig_lines = fid.readlines()
+        return self.repace_wscan_and_add_entfunc_to_fitness_func(orig_lines)
