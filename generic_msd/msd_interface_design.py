@@ -38,11 +38,10 @@ class DesDefFnames:
     also stores the entity function that should be used (if any)"""
 
     def __init__(self, opts: DesignDefinitionOpts, design_species: DesignSpecies):
-        self.desdef_dir = (
-            opts.base_dir
-            + "input_files/design_definitions/"
-            + opts.des_def
-            + ("" if opts.des_def[-1] == "/" else "/")
+        self.desdef_dir = os.path.join(
+            opts.base_dir,
+            "input_files/design_definitions/",
+            opts.des_def,
         )
         self.corr = {}
         self.secresfiles = {}
@@ -1003,10 +1002,10 @@ class MergeBBDesDefFnames(DesDefFnames):
     def __init__(self, opts: DesignDefinitionOpts, design_species: DesignSpecies):
         super(MergeBBDesDefFnames, self).__init__(opts, design_species)
 
-        fname = os.path.join(self.desdef_dif, "definition_files.yaml")
+        fname = os.path.join(self.desdef_dir, "definition_files.yaml")
         self._read_from_file(fname)
 
-    def _read_from_file(self, fname, lines):
+    def _read_from_file(self, fname):
         with open(fname) as fid:
             raw = yaml.load(fid)
         for spec in raw["species"]:
@@ -1014,6 +1013,8 @@ class MergeBBDesDefFnames(DesDefFnames):
             assert spec_name in self.species.species()
             spec_corr = spec["corr"]
             spec_2res = spec["2res"]
+            assert os.path.isfile(os.path.join(self.desdef_dir, spec_corr))
+            assert os.path.isfile(os.path.join(self.desdef_dir, spec_2res))
             self.corr[spec_name] = spec_corr
             self.secresfiles[spec_name] = spec_2res
         if "entfunc" in raw:

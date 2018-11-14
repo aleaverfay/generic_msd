@@ -1,0 +1,8 @@
+species:
+  - {name: MH3_MH4,  corr: MH3_MH4.corr,  2res: MH3_MH4.2resfile} 
+  - {name: MH3_WTH4, corr: MH3.corr,      2res: MH3_WTH4.2resfile}
+  - {name: WTH3_MH4, corr: MH4.corr,      2res: WTH3_MH4.2resfile}
+  - {name: MH3,      corr: MH3.corr,      2res: MH3.2resfile}
+  - {name: MH4,      corr: MH4.corr,      2res: MH4.2resfile}
+entfunc: h3h4_native.entfunc
+

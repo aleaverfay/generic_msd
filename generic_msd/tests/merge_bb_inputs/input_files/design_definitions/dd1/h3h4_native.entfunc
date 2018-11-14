@@ -1,0 +1,45 @@
+# original mutH3_mutH4 sequence for this design definition in 1KX5_chAB.pdb is given by
+# AAAYFVAVLRLF
+
+# entity element ee_1 corresponds to MA88: A 
+SET_CONDITION ee1nat = ee_1 in { A }
+
+# entity element ee_2 corresponds to MA91: A 
+SET_CONDITION ee2nat = ee_2 in { A }
+
+# entity element ee_3 corresponds to MA95: A 
+SET_CONDITION ee3nat = ee_3 in { A }
+
+# entity element ee_4 corresponds to MA99: Y 
+SET_CONDITION ee4nat = ee_4 in { Y }
+
+# entity element ee_5 corresponds to MB61: F 
+SET_CONDITION ee5nat = ee_5 in { F }
+
+# entity element ee_6 corresponds to MB65: V 
+SET_CONDITION ee6nat = ee_6 in { V }
+
+# entity element ee_7 corresponds to MB83: A 
+SET_CONDITION ee7nat = ee_7 in { A }
+
+# entity element ee_8 corresponds to MB86: V 
+SET_CONDITION ee8nat = ee_8 in { V }
+
+# entity element ee_9 corresponds to MB90: L 
+SET_CONDITION ee9nat = ee_9 in { L }
+
+# entity element ee_10 corresponds to MB95: R 
+SET_CONDITION ee10nat = ee_10 in { R }
+
+# entity element ee_11 corresponds to MB97: L 
+SET_CONDITION ee11nat = ee_11 in { L }
+
+# entity element ee_12 corresponds to MB100: F 
+SET_CONDITION ee12nat = ee_12 in { F }
+
+SUB_EXPRESSION nnat = ee1nat + ee2nat + ee3nat + ee4nat + ee5nat + ee6nat + ee7nat + ee8nat + ee9nat + ee10nat + ee11nat + ee12nat
+SUB_EXPRESSION nmut = 6 - nnat
+
+SUB_EXPRESSION mut_penalty = ite( gt( nmut, 6 ), nmut - 6, 0 )
+
+SCORE 2.000000 * mut_penalty
