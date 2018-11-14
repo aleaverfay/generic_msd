@@ -1019,6 +1019,8 @@ class MergeBBDesDefFnames(DesDefFnames):
             self.secresfiles[spec_name] = spec_2res
         if "entfunc" in raw:
             self.entfunc = raw["entfunc"]
+            assert os.path.isfile(os.path.join(self.desdef_dir,self.entfunc))
+        assert os.path.isfile(os.path.join(self.desdef_dir,"entity.resfile"))
 
 
 class MergeBBStateVersion(StateVersion):
