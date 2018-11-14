@@ -2,6 +2,7 @@ import blargs
 import os
 import math
 import traceback
+import yaml
 
 
 class StateVersionOpts:
@@ -47,7 +48,13 @@ class DesDefFnames:
         self.secresfiles = {}
         self.entfunc = ""
         self.species = design_species
-        self.n_entities = 0
+        self.n_entities = self._read_nentities_from_entity_resfile()
+
+    def _read_nentities_from_entity_resfile(self):
+        with open(os.path.join(self.desdef_dir, "entity.resfile")) as fid:
+            lines = fid.readlines()
+        return int(lines[0].strip())
+
 
 
 
@@ -60,7 +67,7 @@ class StateVersion:
         )
         self.design_species = design_species
 
-    def nstates_total():
+    def nstates_total(self):
         raise NotImplementedError()
 
     def pdbs(self):
@@ -305,7 +312,7 @@ class InterfaceMSDJob:
 
 
 class IsolateBBDesignSpecies(DesignSpecies):
-    """Derived DesignSpecies classes identify what species are being modeled
+    """Derived IsolateBBDesignSpecies classes identify what species are being modeled
     and whether those species are complexes or separated complexes and
     whether those species are positive or negative species"""
 
@@ -400,12 +407,6 @@ class IsolateBBDesDefFnames(DesDefFnames):
                     "on line:\n",
                     line.strip("\n"),
                 )
-
-    def _read_nentities_from_entity_resfile(self):
-        with open(os.path.join(self.desdef_dir, "entity.resfile")) as fid:
-            lines = fid.readlines()
-        return int(lines[0].strip())
-
 
 
 class IsolateBBStateVersion(StateVersion):
@@ -947,3 +948,112 @@ class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
             else:
                 newlines.append(line)
         return newlines
+
+
+
+###################################################################################
+###################################################################################
+###################################################################################
+
+class MergeBBDesignSpecies(DesignSpecies):
+    """Derived MergeBBDesignSpecies classes identify a set of complexes and a set
+    of monomers."""
+
+    def species(self):
+        raise NotImplementedError()
+
+    def is_complex(self, spec):
+        raise NotImplementedError()
+
+    def is_monomer(self, spec):
+        raise NotImplementedError()
+
+
+class MergeBBDesDefFnames(DesDefFnames):
+    def __init__(self, opts: DesignDefinitionOpts, design_species: DesignSpecies):
+        super(MergeBBDesDefFnames, self).__init__(opts, design_species)
+
+        fname = os.path.join(self.desdef_dif, "definition_files.yaml")
+        self._read_from_file(fname)
+
+    def _read_from_file(self, fname, lines):
+        with open(fname) as fid:
+            raw = yaml.load(fid)
+        for spec in raw["species"]:
+            spec_name = spec["name"]
+            assert spec_name in self.species.species()
+            spec_corr = spec["corr"]
+            spec_2res = spec["2res"]
+            self.corr[spec_name] = spec_corr
+            self.secresfiles[spec_name] = spec_2res
+        if "entfunc" in raw:
+            self.entfunc = raw["entfunc"]
+
+class MergeBBStateVersion(StateVersion):
+    def __init__(self, opts: StateVersionOpts, design_species: MergeBBDesignSpecies):
+        super(MergeBBStateVersion, self).__init__(opts, design_species)
+        self._determined_pdbs = False
+        self.count_n_states = 0
+
+
+    def pdbs(self):
+        if not self._determined_pdbs:
+            self.determine_pdbs()
+        return self.all_pdbs
+
+    def nstates_total(self):
+        if not self._determined_pdbs:
+            self.determine_pdbs()
+        return self.count_n_states
+
+    def determine_pdbs(self):
+        # read the all states.yaml file
+        # this will give the species for each PDB file
+        # there may be more than one PDB file per species
+        self.pdbs_for_spec = {}
+        self.all_pdbs = set([])
+        fname = os.path.join(self.state_version_dir, "states.yaml")
+        with open(fname) as fid:
+            raw = yaml.load(fid)
+        for entry in raw["pdbs"]:
+            self.count_n_states += 1
+            spec = entry["species"]
+            pdb = entry["pdb"]
+            assert spec in self.species.species()
+            assert os.path.isfile(os.join(self.state_version_dir, pdb))
+            if spec not in self.states:
+                self.pdbs_for_spec[spec] = []
+            self.pdbs_for_spec[spec].append(pdb)
+            self.all_pdbs.add(pdb)
+
+        # now, let's write the .states files if we haven't done so already
+        for spec in self.species.species():
+            states_fname = os.path.join(self.state_version_dir, spec + ".states")
+            if not os.path.isfile(states_fname):
+                lines = []
+                for pdb in self.pdbs_for_spec[spec]:
+                    lines.append( "%s %s %s\n" % (
+                            pdb,
+                            spec + ".corr",
+                            spec + ".2res"))
+                with open(states_fname, "w") as fid:
+                    fid.writelines(lines)
+
+        self._determined_pdbs = True
+        
+
+class MergeBBInterfaceMSDJob(InterfaceMSDJob):
+ 
+    def __init__(self, msd_opts: MSDIntDesJobOptions):
+        super(MergeBBInterfaceMSDJob, self).__init__(msd_opts)
+        assert isinstance(self.design_species, MergeBBDesignSpecies)
+        assert isinstance(self.desdef_fnames, MergeBBDesDefFnames)
+        assert isinstance(self.state_version, MergeBBStateVersion)
+
+    def files_to_symlink(self, subdir):
+        pdbs = [os.path.join(self.state_version.state_version_dir,pdb) for pdb in self.state_version.pdbs()]
+        state_files = [spec + ".states" for spec in self.design_species.species()]
+        
+                
+            
+
