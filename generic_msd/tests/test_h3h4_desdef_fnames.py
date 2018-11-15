@@ -1,4 +1,4 @@
-from generic_msd.msd_interface_design import DesignSpecies, DesignDefinitionOpts, DesDefFnames
+from generic_msd.msd_interface_design import DesignSpecies, DesignDefinitionOpts, IsolateBBDesDefFnames
 from generic_msd.tests.dummy_desdef import dummy_design_species
 
 import os
@@ -35,12 +35,12 @@ def test_desdef_fnames():
 
     spec = dummy_design_species()
 
-    fnames1 = DesDefFnames(desdef_opts1, spec)
+    fnames1 = IsolateBBDesDefFnames(desdef_opts1, spec)
     assert (
         fnames1.desdef_dir
-        == basedir + "input_files/design_definitions/desdef1_only_hphobes/"
+        == basedir + "input_files/design_definitions/desdef1_only_hphobes"
     )
-    fnames2 = DesDefFnames(desdef_opts2, spec)
+    fnames2 = IsolateBBDesDefFnames(desdef_opts2, spec)
     assert (
         fnames2.desdef_dir
         == basedir + "input_files/design_definitions/desdef1_only_hphobes/"

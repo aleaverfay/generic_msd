@@ -1,6 +1,8 @@
 from generic_msd.tests.dummy_desdef import dummy_design_species
 from generic_msd.tests.dummy_state_version import dummy_state_version
 from generic_msd.tests.dummy_interface_job import H3H4InterfaceMSDJob
+from generic_msd.tests.mergebb_design_species import MergeH3H4DesignSpecies
+from generic_msd.tests.mergebb_msd_job import H3H4MergeBBInterfaceMSDJob
 from generic_msd.opt_holder import OptHolder
 from generic_msd.msd_interface_design import (
     MSDIntDesJobOptions,
@@ -148,3 +150,55 @@ def test_setup_msd_job_dogwood():
     )
 
     #recursively_rm_directory("test_job1_dogwood")
+
+def test_setup_mergebb_msd_job_killdevil():
+    opts = OptHolder()
+    currpath = os.path.dirname(os.path.abspath(__file__))
+    basedir = os.path.join(currpath,"merge_bb_inputs")
+    opts["base_dir"] = basedir
+
+    p = blargs.Parser(opts)
+    DesignDefinitionOpts.add_options(p)
+    StateVersionOpts.add_options(p)
+    MSDIntDesJobOptions.add_options(p)
+    PostProcessingOpts.add_options(p)
+
+    si = KilldevilServerIdentifier()
+    JobExecutionOptions.add_options(p, si)
+
+    p.process_command_line(
+        [
+            "--des_def",
+            "dd1",
+            "--state_version",
+            "frwt_v1mock_dd1",
+            "--job_name",
+            "test_job2_killdevil",
+            "--daf",
+            os.path.join(basedir, "input_files/fitness_functions/example_func.txt"),
+            "--w_dGdiff_bonus_weights_file",
+            os.path.join(basedir, "input_files/scan_values/scan_1_2.txt"),
+            "--entfunc_weights_file",
+            os.path.join(basedir, "input_files/scan_values/scan_1_2_3.txt"),
+        ]
+    )
+
+    msd_job = H3H4MergeBBInterfaceMSDJob(opts)
+
+    if os.path.isdir("test_job2_killdevil"):
+        recursively_rm_directory("test_job2_killdevil")
+    msd_manager = MSDJobManager(msd_job, opts, si)
+    msd_manager.prepare_job()
+
+    # Assertions
+    assert os.path.isdir("test_job2_killdevil/")
+    focus_dir = "test_job2_killdevil/test_job2_killdevil_1.0w_dGdiff_1.0Ent/"
+    assert os.path.isdir(focus_dir)
+    for dgwt in ["1.0w", "2.0w"]:
+        for entwt in ["1.0Ent", "2.0Ent", "3.0Ent"]:
+            assert os.path.isdir(
+                focus_dir.replace("1.0w", dgwt).replace("1.0Ent", entwt)
+            )
+    assert os.path.isfile(focus_dir + "fitness.daf")
+
+    #recursively_rm_directory("test_job1_killdevil")
