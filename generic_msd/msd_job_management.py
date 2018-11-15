@@ -182,7 +182,7 @@ class MSDJobManager:
         if self.msd_job.fill_gen1_from_seeds():
             command_line += " -fill_gen1_from_seed_sequences"
 
-        submission_command, command_filename = command_and_submission_script_for_job(
+        submission_command = command_and_submission_script_for_job(
             job_options, command_line
         )
         self.launch_script.append("cd " + subdir + "\n")
@@ -241,15 +241,18 @@ class MSDJobManager:
         ]
 
         launch_docking_script.append(" ".join(dock_jobs_command))
+        # we need the djv_submit script to live in the results directory, but that directory
+        # doesn't exist yet and won't exist until after the gather_output script runs
+        launch_docking_script.append("ln -s ../djv_submit.sh\n")
 
         # now prepare the dock_jobs_view command and append it to the launch_docking script
-        #dock_jobs_view_job_opts = SubmissionOptions()
-        #dock_jobs_view_job_opts.scheduler = scheduler_type_for_server(self.si)
-        #dock_jobs_view_job_opts.num_nodes = 1
-        #dock_jobs_view_job_opts.queue = "debug_queue"
-        #dock_jobs_view_job_opts.job_name = self.msd_job.job_name() + "_dock_jobs_view"
-        #dock_jobs_view_job_opts.logfilename = self.msd_job.job_name() + "_djv.log"
-        #dock_jobs_view_job_opts.submission_script_fname = "djv_submit.sh"
+        dock_jobs_view_job_opts = SubmissionOptions()
+        dock_jobs_view_job_opts.scheduler = scheduler_type_for_server(self.si)
+        dock_jobs_view_job_opts.num_nodes = 1
+        dock_jobs_view_job_opts.queue = "debug_queue"
+        dock_jobs_view_job_opts.job_name = self.msd_job.job_name() + "_dock_jobs_view"
+        dock_jobs_view_job_opts.logfilename = self.msd_job.job_name() + "_djv.log"
+        dock_jobs_view_job_opts.submission_script_fname = "djv_submit.sh"
 
         dock_jobs_view_command_line = " ".join([
             "python3",
@@ -257,18 +260,15 @@ class MSDJobManager:
             "-l complex_sets.list -o after_docking_dGbind.txt",
             self.msd_job.post_processing_opts.to_command_line(),
             ])
-        #dock_jobs_view_submission_command, dock_jobs_view_command_filename = command_and_submission_script_for_job(
-        #    dock_jobs_view_job_opts, dock_jobs_view_command_line
-        #)
+        command_and_submission_script_for_job(
+           dock_jobs_view_job_opts, dock_jobs_view_command_line
+        )
 
-        #if dock_jobs_view_command_filename is None:
-        #    with open("djv_submit.sh", "w") as fid:
-        #        fid.writelines(dock_jobs_view_submission_command)
         dock_jobs_view_submission_command = [
             "python3",
             pyscripts_path(self.si) + "submit_dependent_script.py",
             "dock/dock_submission.log",
-            dock_jobs_view_command_line,
+            dock_jobs_view_job_opts.submission_script_fname,
             "\n",
         ]
 
@@ -279,23 +279,19 @@ class MSDJobManager:
 
         launch_docking_script.append(" ".join(dock_jobs_view_submission_command))
 
-        #launch_docking_job_opts = SubmissionOptions()
-        #launch_docking_job_opts.scheduler = scheduler_type_for_server(self.si)
-        #launch_docking_job_opts.num_nodes = 1
-        #launch_docking_job_opts.queue = "debug"
-        #launch_docking_job_opts.job_name = self.msd_job.job_name() + "_launch_docking"
-        #launch_docking_job_opts.logfilename = (
-        #    self.msd_job.job_name() + "_launch_docking.log"
-        #)
-        #launch_docking_job_opts.submission_script_fname = "launch_docking.sh"
-        #
-        #launch_docking_submission_command, launch_docking_command_filename = command_and_submission_script_for_job(
-        #    launch_docking_job_opts, "".join(launch_docking_script)
-        #)
-        #
-        #if launch_docking_command_filename is None:
-        with open("launch_docking.sh", "w") as fid:
-            fid.writelines(launch_docking_script)
+        launch_docking_job_opts = SubmissionOptions()
+        launch_docking_job_opts.scheduler = scheduler_type_for_server(self.si)
+        launch_docking_job_opts.num_nodes = 1
+        launch_docking_job_opts.queue = "debug"
+        launch_docking_job_opts.job_name = self.msd_job.job_name() + "_launch_docking"
+        launch_docking_job_opts.logfilename = (
+            self.msd_job.job_name() + "_launch_docking.log"
+        )
+        launch_docking_job_opts.submission_script_fname = "launch_docking.sh"
+        
+        command_and_submission_script_for_job(
+            launch_docking_job_opts, "".join(launch_docking_script)
+        )
             
         with open("prepare_for_docking.sh", "w") as fid:
             fid.writelines(

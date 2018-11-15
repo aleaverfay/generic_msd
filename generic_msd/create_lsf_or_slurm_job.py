@@ -1,7 +1,6 @@
 from enum import Enum
 import socket
 import os
-import typing
 from .server_identification import ServerIdentifier, KnownComputers
 
 class SchedulerType(Enum):
@@ -33,28 +32,42 @@ class SubmissionOptions:
 
 def command_and_submission_script_for_job(
     job_options: SubmissionOptions, command_line: str
-) -> typing.Tuple[str, str]:
+) -> str:
     """Create either LSF or SLURM command for launching a job
 
-    If the scheduler is SLURM, then create a job submission file
-    that holds the command for launching the input job
-    and return the command for launching
+    Create a file (possibly a job submission file)
+    that holds the command(s) that should be run
+    and return the command for submitting the job.
+
+    NOTE: This command may include an input redirect operator
+    ("<") so if you pass this command to another command,
+    make sure to wrap it in quotes!
     """
 
     if job_options.scheduler == SchedulerType.LSF_SCHEDULER:
-        subcmd_list = ["bsub -n"]
-        subcmd_list.append(str(job_options.num_nodes))
-        subcmd_list.append("-q " + job_options.queue)
-        subcmd_list.append("-o " + job_options.logfilename)
+        script_lines = ["#!/bin/bash\n"]
+        script_lines.append("#BSUB -n %d\n" % job_options.num_nodes)
+        script_lines.append("#BSUB -q %s\n" % job_options.queue)
+        script_lines.append("#BSUB -o %s\n" % job_options.logfilename)
+        #subcmd_list = ["bsub -n"]
+        #subcmd_list.append(str(job_options.num_nodes))
+        #subcmd_list.append("-q " + job_options.queue)
+        #subcmd_list.append("-o " + job_options.logfilename)
         if job_options.mpi_job:
-            subcmd_list.append("-a mvapich mpirun " + command_line)
+            script_lines.append("#BSUB -a mvapich\n")
+            script_lines.append("mpirun %s\n" % command_line)
+            #subcmd_list.append("-a mvapich mpirun " + command_line)
         else:
-            subcmd_list.append(command_line)
-        return (" ".join(subcmd_list), None)
+            script_lines.append(command_line)
+            #subcmd_list.append(command_line)
+        with open(job_options.submission_script_fname, "w") as fid:
+            fid.writelines(script_lines)
+        return "bsub < %s" % job_options.submission_script_fname
+
     else:
         assert job_options.scheduler == SchedulerType.SLURM_SCHEDULER
 
-        subcmd = "sbatch " + job_options.submission_script_fname
+
         script_lines = ["#!/bin/bash"]
         script_lines.append("#SBATCH --job-name=%s" % job_options.job_name)
         script_lines.append("#SBATCH --distribution=cyclic")
@@ -70,6 +83,8 @@ def command_and_submission_script_for_job(
                 script_lines.append("#SBATCH --partition=528_queue")
             else:
                 script_lines.append("#SBATCH --partition=2112_queue")
+        elif job_options.queue == "debug":
+            script_lines.append("#SBATCH --partition=debug_queue")
         else:
             script_lines.append("#SBATCH --partition=%s" % job_options.queue)
         # script_lines.append( "#SBATCH --time=%02d:%02d:%02d" % job_options.timelimit )
@@ -80,4 +95,5 @@ def command_and_submission_script_for_job(
             script_lines.append(command_line + "\n")
         with open(job_options.submission_script_fname, "w") as fid:
             fid.writelines("\n".join(script_lines))
-        return (subcmd, job_options.submission_script_fname)
+        return "sbatch " + job_options.submission_script_fname
+
