@@ -231,7 +231,7 @@ class InterfaceMSDJob:
         self.w_dGdiff_bonus_weights_file = resolve_abs_path(
             msd_opts.w_dGdiff_bonus_weights_file
         )
-        self.daf = msd_opts.daf
+        self.daf = resolve_abs_path(msd_opts.daf)
         self.entfunc_weights_file = resolve_abs_path(msd_opts.entfunc_weights_file)
         self.preserve_DAF = msd_opts.preserve_DAF
         self.positive_states = msd_opts.positive_states
@@ -1011,6 +1011,7 @@ class MergeBBDesDefFnames(DesDefFnames):
             raw = yaml.load(fid)
         for spec in raw["species"]:
             spec_name = spec["name"]
+            #print("species:", spec_name)
             assert spec_name in self.species.species()
             spec_corr = spec["corr"]
             spec_2res = spec["2res"]
@@ -1117,13 +1118,11 @@ class MergeBBInterfaceMSDJob(InterfaceMSDJob):
                 )
             )
 
-        retlist = list(
+        return list(
             itertools.chain(
                 pdb_state_and_flag_pairs, corr_pairs, secres_pairs, extras
             )
         )
-        print(retlist)
-        return retlist
 
     def states_to_save(self):
         """Instruct the MSD job manager to save all species by default"""
