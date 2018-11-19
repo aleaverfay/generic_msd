@@ -5,6 +5,12 @@ import traceback
 import yaml
 import itertools
 
+def resolve_abs_path(fname):
+    if len(fname) > 0 and fname[0] == "/":
+        return fname
+    else:
+        print(os.getcwd(), fname)
+        return os.path.join(os.getcwd(), fname)
 
 class StateVersionOpts:
     @staticmethod
@@ -118,7 +124,7 @@ class MSDIntDesJobOptions:
 class PostProcessingOpts:
     def __init__(self, cl_opts):
         self.base_dir = cl_opts.base_dir
-        self.docking_flags_files = cl_opts.docking_flags_files
+        self.docking_flags_files = [resolve_abs_path(x) for x in cl_opts.docking_flags_files]
         self.relax = cl_opts.relax
         self.docking_n_cpu = cl_opts.docking_n_cpu
 
@@ -139,14 +145,6 @@ class PostProcessingOpts:
         p.multiword("docking_flags_files").default("").cast(lambda x: x.split())
         p.flag("relax")
         p.int("docking_n_cpu").default(45)
-
-
-def resolve_abs_path(fname):
-    if len(fname) > 0 and fname[0] == "/":
-        return fname
-    else:
-        print(os.getcwd(), fname)
-        return os.path.join(os.getcwd(), fname)
 
 
 class InterfaceMSDJob:
@@ -1095,7 +1093,7 @@ class MergeBBInterfaceMSDJob(InterfaceMSDJob):
         secres_pairs = [
             (
                 os.path.join(desdefdir, self.desdef_fnames.secresfiles[spec]),
-                spec + ".2res",
+                spec + ".2resfile",
             )
             for spec in species
         ]

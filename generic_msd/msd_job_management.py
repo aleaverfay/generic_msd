@@ -234,7 +234,7 @@ class MSDJobManager:
         dock_jobs_command = [
             "python3",
             os.path.join(self.base_dir, "pyscripts/dock_jobs_run.py"),
-            "--pdb-triples",
+            "--pdb-complexes",
             "complex_sets.list",
             self.msd_job.post_processing_opts.to_command_line(),
             "\n",
@@ -312,7 +312,8 @@ class MSDJobManager:
 
     def save_creation_command(self):
         with open("creation_command.txt", "w") as fid:
-            fid.writelines( " ".join(sys.argv))
+            fid.writelines( " ".join(sys.argv) + "\n")
         
     def launch(self):
-        pass
+        os.system("bash submit_all_jobs.sh")
+        os.system("bash prepare_for_docking.sh")
