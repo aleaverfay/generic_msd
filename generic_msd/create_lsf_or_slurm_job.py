@@ -45,9 +45,10 @@ def command_and_submission_script_for_job(
     """
 
     if job_options.scheduler == SchedulerType.LSF_SCHEDULER:
+        queue = job_options.queue if job_options.queue != "auto" else "week"
         script_lines = ["#!/bin/bash\n"]
         script_lines.append("#BSUB -n %d\n" % job_options.num_nodes)
-        script_lines.append("#BSUB -q %s\n" % job_options.queue)
+        script_lines.append("#BSUB -q %s\n" % queue)
         script_lines.append("#BSUB -o %s\n" % job_options.logfilename)
         #subcmd_list = ["bsub -n"]
         #subcmd_list.append(str(job_options.num_nodes))
