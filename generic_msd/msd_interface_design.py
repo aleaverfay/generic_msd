@@ -15,9 +15,18 @@ def resolve_abs_path(fname):
 class StateVersionOpts:
     @staticmethod
     def add_options(blargs_parser: blargs.Parser):
+        add_required_options(blargs_parser)
+        add_non_required_options(blargs_parser)
+        
+    @staticmethod
+    def add_required_options(blargs_parser: blargs.Parser):
         blargs_parser.str("state_version").shorthand("s").required()
 
-    def __init__(self, opts):
+    @staticmethod
+    def add_non_required_options(blargs_parser: blargs.Parser):
+        pass
+
+def __init__(self, opts):
         self.state_version_dir = opts.state_version
         self.base_dir = opts.base_dir
 
@@ -29,7 +38,16 @@ class DesignDefinitionOpts:
 
     @staticmethod
     def add_options(blargs_parser: blargs.Parser):
+        add_required_options(blargs_parser)
+        add_non_required_options(blargs_parser)
+
+    @staticmethod
+    def add_required_options(blargs_parser: blargs.Parser):
         blargs_parser.str("des_def").shorthand("d").required()
+
+    @staticmethod
+    def add_non_required_options(blargs_parser: blargs.Parser):
+        pass
 
 
 class DesignSpecies:
@@ -104,13 +122,17 @@ class MSDIntDesJobOptions:
 
     @staticmethod
     def add_options(blargs_parser: blargs.Parser):
+        add_non_required_options(blargs_parser)
+        add_required_options(blargs_parser)
+
+        
+    @staticmethod
+    def add_non_required_options(blargs_parser: blargs.Parser):
         p = blargs_parser
         p.int("ntop_msd_results_to_dock").default(1)
-        p.str("job_name").shorthand("j").required()
         p.multiword("flags_files").shorthand("f").default("").cast(lambda x: x.split())
-        p.str("w_dGdiff_bonus_weights_file").shorthand("w").required()
-        p.str("daf").shorthand("a").required()
-        p.str("entfunc_weights_file").shorthand("e").required()
+        p.str("w_dGdiff_bonus_weights_file").shorthand("w")
+        p.str("entfunc_weights_file").shorthand("e")
         p.flag("preserve_DAF").shorthand("p")
         p.str("positive_states").default("")
         p.float("ngen_scale").default(15)
@@ -119,6 +141,24 @@ class MSDIntDesJobOptions:
         sr = p.flag("single_round")
         p.flag("fill_gen1_from_seeds").conflicts(sr)
         p.int("pop_size").default(100)
+
+    @staticmethod
+    def add_required_options(blargs_parser: blargs.Parser):
+        p = blargs_parser
+        opts = required_opts()
+        for opt in opts:
+            m = getattr(p, opt[0])
+            blarg_opt = m(p, opt[1])
+            for exmethod, args in opt[2]:
+                m = getattr(blarg_opt, exmethod)
+                m(blarg_opt, *args)
+        #p.str("job_name").shorthand("j").required()
+        #p.str("daf").shorthand("a").required()
+
+    @staticmethod
+    def required_opts():
+        return [ "str", "job_name", [("shorthand", ("j",))],
+                 "str", "daf", [("shorthand", ("a",))]]
 
 
 class PostProcessingOpts:
@@ -141,6 +181,15 @@ class PostProcessingOpts:
 
     @staticmethod
     def add_options(blargs_parser: blargs.Parser):
+        add_required_options(blargs_parser)
+        add_non_required_options(blargs_parser)
+        
+    @staticmethod
+    def add_required_options(blargs_parser: blargs.Parser):
+        pass
+
+    @staticmethod
+    def add_non_required_options(blargs_parser: blargs.Parser):
         p = blargs_parser
         p.multiword("docking_flags_files").default("").cast(lambda x: x.split())
         p.flag("relax")
@@ -228,9 +277,9 @@ class InterfaceMSDJob:
         self.flags_files = [resolve_abs_path(x) for x in msd_opts.flags_files]
         self.w_dGdiff_bonus_weights_file = resolve_abs_path(
             msd_opts.w_dGdiff_bonus_weights_file
-        )
+        ) if msd_opts.has_attr("w_dGdiff_bonus_weights_file") else ""
         self.daf = resolve_abs_path(msd_opts.daf)
-        self.entfunc_weights_file = resolve_abs_path(msd_opts.entfunc_weights_file)
+        self.entfunc_weights_file = resolve_abs_path(msd_opts.entfunc_weights_file) if msd_opts.hasattr("entfunc_weights_file") else ""
         self.preserve_DAF = msd_opts.preserve_DAF
         self.positive_states = msd_opts.positive_states
         self.ngen_scale = msd_opts.ngen_scale
