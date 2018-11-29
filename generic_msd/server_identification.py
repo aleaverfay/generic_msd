@@ -16,12 +16,18 @@ class KnownComputers(Enum):
     CATHYS_DESKTOP = "cathys_desktop"
 
 class ServerIdentifier:
+    def __init__(self, *, masq=None):
+        self.masquerade = masq
+
     @toolz.functoolz.memoize
     def what_computer(self) -> KnownComputers:
         """Return the id for the computer this script is running on.
 
         This function is ever so slightly expensive, and needs only to
         be run once, so it is memoized"""
+        if self.masquerade:
+            return self.masquerade
+
         hostname = socket.gethostname()
         if self._on_killdevil(hostname):
             return KnownComputers.KILLDEVIL

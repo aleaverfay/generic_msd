@@ -216,24 +216,32 @@ class MSDIntDesJobOptions:
 
     def to_command_line(self):
         args = []
+        args.append("--job_name")
+        args.append(self.job_name)
+        args.append("--daf")
+        args.append(self.daf)
         args.append("--ntop_msd_results_to_dock")
         args.append(str(self.ntop_msd_results_to_dock))
-        args.append("--flags_files")
-        args.extend(self.flags_files)
-        args.append("--w_dGdiff_bonus_weights_file")
-        args.append(self.w_dGdiff_bonus_weights_file)
-        args.append("--entfunc_weights_file")
-        args.append(self.entfunc_weights_file)
+        if self.flags_files:
+            args.append("--flags_files")
+            args.extend(self.flags_files)
+        if self.w_dGdiff_bonus_weights_file:
+            args.append("--w_dGdiff_bonus_weights_file")
+            args.append(self.w_dGdiff_bonus_weights_file)
+        if self.entfunc_weights_file:
+            args.append("--entfunc_weights_file")
+            args.append(self.entfunc_weights_file)
         if self.preserve_DAF:
             args.append("--preserve_DAF")
-        args.append("--positive_states")
-        args.append(self.positive_states)
+        if self.positive_states != "":
+            args.append("--positive_states")
+            args.append(self.positive_states)
         args.append("--ngen_scale")
         args.append(str(self.ngen_scale))
-        if len(self.seed_sequences) != 0:
+        if self.seed_sequences != 0:
             args.append("--seed_sequences")
             args.extend(self.seed_sequences)
-        if len(self.pdb_seed_pairs) != 0:
+        if self.pdb_seed_pairs:
             args.append("--pdb_seed_pairs")
             args.extend(self.pdb_seed_pairs)
         if self.single_round:
@@ -243,6 +251,7 @@ class MSDIntDesJobOptions:
         args.append("--pop_size")
         args.append(str(self.pop_size))
 
+        print("args!", args)
         return " ".join(args)
 
 
@@ -271,7 +280,12 @@ class PostProcessingOpts:
         
     @classmethod
     def add_required_options(cls, blargs_parser: blargs.Parser):
-        pass
+        add_required_opts_to_blargs_parser(blargs_parser, cls.required_opts())
+
+    @classmethod
+    def required_opts(cls):
+        return []
+
 
     @classmethod
     def add_non_required_options(cls, blargs_parser: blargs.Parser):
@@ -362,9 +376,9 @@ class InterfaceMSDJob:
         self.flags_files = [resolve_abs_path(x) for x in msd_opts.flags_files]
         self.w_dGdiff_bonus_weights_file = resolve_abs_path(
             msd_opts.w_dGdiff_bonus_weights_file
-        ) if hasattr(msd_opts,"w_dGdiff_bonus_weights_file") else ""
+        ) if msd_opts.w_dGdiff_bonus_weights_file else ""
         self.daf = resolve_abs_path(msd_opts.daf)
-        self.entfunc_weights_file = resolve_abs_path(msd_opts.entfunc_weights_file) if hasattr(msd_opts,"entfunc_weights_file") else ""
+        self.entfunc_weights_file = resolve_abs_path(msd_opts.entfunc_weights_file) if msd_opts.entfunc_weights_file else ""
         self.preserve_DAF = msd_opts.preserve_DAF
         self.positive_states = msd_opts.positive_states
         self.ngen_scale = msd_opts.ngen_scale

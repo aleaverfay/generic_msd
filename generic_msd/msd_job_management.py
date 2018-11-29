@@ -24,7 +24,7 @@ class JobExecutionOptions:
     def __init__(self, opts, si: ServerIdentifier):
         self.num_cpu = opts.num_cpu
         self.num_states_per_cpu = opts.num_states_per_cpu
-        self.launch = hasattr(opts, "launch")
+        self.launch = opts.launch
         self.queue = opts.queue
         self.si = si
 
@@ -53,6 +53,8 @@ class JobExecutionOptions:
             print("added queue")
             blargs_parser.str("queue").shorthand("q").default("week")
         elif server == KnownComputers.DOGWOOD:
+            blargs_parser.str("queue").shorthand("q").default("auto")
+        else:
             blargs_parser.str("queue").shorthand("q").default("auto")
 
     def to_command_line(self):
@@ -154,6 +156,7 @@ class MSDJobManager:
 
     def create_symlinks(self, subdir):
         filename_pairs = self.msd_job.files_to_symlink(subdir)
+        print("Filename pairs",filename_pairs)
         for src_fname, dest_fname in filename_pairs:
             if not os.path.isfile(src_fname):
                 raise ValueError(
@@ -166,6 +169,7 @@ class MSDJobManager:
                     + "."
                 )
             else:
+                print("symlinking", src_fname, dest_fname)
                 os.system(" ".join(("ln -s", src_fname, dest_fname)))
 
     def write_fitness_file(self, subdir):
