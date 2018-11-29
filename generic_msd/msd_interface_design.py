@@ -251,7 +251,6 @@ class MSDIntDesJobOptions:
         args.append("--pop_size")
         args.append(str(self.pop_size))
 
-        print("args!", args)
         return " ".join(args)
 
 
@@ -327,6 +326,12 @@ class InterfaceMSDJob:
             or (self.pdb_seed_pairs and len(self.pdb_seed_pairs) != 0)
             or self.fill_gen1_from_seeds_
         )
+    def seeds(self):
+        if self.seed_sequences:
+            return self.seed_sequences
+        # oh, man, there's no code here for dealing with PDB seed pairs.
+        # there needs to be!
+        raise NotImplementedError()
 
     def fill_gen1_from_seeds(self):
         return self.fill_gen1_from_seeds_
