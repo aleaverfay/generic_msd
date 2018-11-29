@@ -3,6 +3,7 @@ from enum import Enum
 import os
 from .server_identification import ServerIdentifier, KnownComputers
 from .create_lsf_or_slurm_job import (SubmissionOptions, command_and_submission_script_for_job, SchedulerType, scheduler_type_for_server)
+from .msd_interface_design import add_required_opts_to_blargs_parser
 import typing
 import math
 import sys
@@ -27,8 +28,21 @@ class JobExecutionOptions:
         self.queue = opts.queue
         self.si = si
 
-    @staticmethod
-    def add_options(blargs_parser: blargs.Parser, si: ServerIdentifier):
+    @classmethod
+    def add_options(cls, blargs_parser: blargs.Parser, si: ServerIdentifier):
+        cls.add_required_options(blargs_parser, si)
+        cls.add_non_required_options(blargs_parser, si)
+
+    @classmethod
+    def add_required_options(cls, blargs_parser: blargs.Parser, si: ServerIdentifier):
+        add_required_opts_to_blargs_parser(blargs_parser, cls.required_opts())
+
+    @classmethod
+    def required_opts(cls):
+        return []
+
+    @classmethod
+    def add_non_required_options(cls, blargs_parser: blargs.Parser, si: ServerIdentifier):
         blargs_parser.int("num_cpu").shorthand("n").default(-1)
         blargs_parser.int("num_states_per_cpu").default(1)
         blargs_parser.flag("launch")
@@ -41,6 +55,17 @@ class JobExecutionOptions:
         elif server == KnownComputers.DOGWOOD:
             blargs_parser.str("queue").shorthand("q").default("auto")
 
+    def to_command_line(self):
+        args = []
+        if self.num_cpu != -1 :
+            args.append("--num_cpu")
+            args.append(str(self.num_cpu))
+        if self.num_states_per_cpu != 1:
+            args.append("--num_states_per_cpu")
+            args.append(str(self.num_states_per_cpu))
+        if self.launch:
+            args.append("--launch")
+        return " ".join(args)
 
 
 def rosetta_dir(si: ServerIdentifier):

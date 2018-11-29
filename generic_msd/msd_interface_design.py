@@ -12,23 +12,76 @@ def resolve_abs_path(fname):
         print(os.getcwd(), fname)
         return os.path.join(os.getcwd(), fname)
 
-class StateVersionOpts:
-    @staticmethod
-    def add_options(blargs_parser: blargs.Parser):
-        add_required_options(blargs_parser)
-        add_non_required_options(blargs_parser)
-        
-    @staticmethod
-    def add_required_options(blargs_parser: blargs.Parser):
-        blargs_parser.str("state_version").shorthand("s").required()
+def add_required_opts_to_blargs_parser(
+    blargs_parser: blargs.Parser,
+    opt_args
+):
+    """Add a set of required options to the blargs Parser
+    where the functions and their arguments are specified
+    in opt_args.
+    
+    Opt args should be a list of tuples; each tuple is
+      1 the type of option, as a string
+      2 the name of the option, as a string
+      3 a list of tuples; each element is
+          1 the name of an additional function to call, as a string
+          2 a tuple of the arguments to pass to that function
+    """
+    add_opts_to_blargs_parser(blargs_parser, opt_args, True)
 
-    @staticmethod
-    def add_non_required_options(blargs_parser: blargs.Parser):
+def add_opts_to_blargs_parser(
+    blargs_parser: blargs.Parser,
+    opt_args,
+    required: bool
+):
+    """Add a set of options to the blargs Parser
+    where the functions and their arguments are specified
+    in opt_args.
+    
+    Opt args should be a list of tuples; each tuple is
+      1 the type of option, as a string
+      2 the name of the option, as a string
+      3 a list of tuples; each element is
+          1 the name of an additional function to call, as a string
+          2 a tuple of the arguments to pass to that function
+    """
+    for opt in opt_args:
+        m = getattr(blargs_parser, opt[0])
+        blarg_opt = m(opt[1])
+        for exmethod, args in opt[2]:
+            m = getattr(blarg_opt, exmethod)
+            m(*args)
+        if required:
+            blarg_opt.required()
+
+
+class StateVersionOpts:
+    @classmethod
+    def add_options(cls, blargs_parser: blargs.Parser):
+        cls.add_required_options(blargs_parser)
+        cls.add_non_required_options(blargs_parser)
+        
+    @classmethod
+    def add_required_options(cls, blargs_parser: blargs.Parser):
+        add_required_opts_to_blargs_parser(blargs_parser, cls.required_opts())
+
+    @classmethod
+    def required_opts(cls):
+        return [("str","state_version", [("shorthand",("s",))])]
+
+    @classmethod
+    def add_non_required_options(cls, blargs_parser: blargs.Parser):
         pass
 
-def __init__(self, opts):
+    def __init__(self, opts):
         self.state_version_dir = opts.state_version
         self.base_dir = opts.base_dir
+
+    def to_command_line(self):
+        args = []
+        args.append("--state_version")
+        args.append(self.state_version_dir)
+        return " ".join(args)
 
 
 class DesignDefinitionOpts:
@@ -36,18 +89,28 @@ class DesignDefinitionOpts:
         self.des_def = opts.des_def
         self.base_dir = opts.base_dir
 
-    @staticmethod
-    def add_options(blargs_parser: blargs.Parser):
-        add_required_options(blargs_parser)
-        add_non_required_options(blargs_parser)
+    @classmethod
+    def add_options(cls, blargs_parser: blargs.Parser):
+        cls.add_required_options(blargs_parser)
+        cls.add_non_required_options(blargs_parser)
 
-    @staticmethod
-    def add_required_options(blargs_parser: blargs.Parser):
-        blargs_parser.str("des_def").shorthand("d").required()
+    @classmethod
+    def add_required_options(cls, blargs_parser: blargs.Parser):
+        add_required_opts_to_blargs_parser(blargs_parser, cls.required_opts())
 
-    @staticmethod
-    def add_non_required_options(blargs_parser: blargs.Parser):
+    @classmethod
+    def required_opts(cls):
+        return [("str","des_def",[("shorthand",("d",))])]
+
+    @classmethod
+    def add_non_required_options(cls, blargs_parser: blargs.Parser):
         pass
+
+    def to_command_line(self):
+        args = []
+        args.append("--des_def")
+        args.append(self.des_def)
+        return " ".join(args)
 
 
 class DesignSpecies:
@@ -120,14 +183,14 @@ class MSDIntDesJobOptions:
         self.fill_gen1_from_seeds = cl_opts.fill_gen1_from_seeds
         self.pop_size = cl_opts.pop_size
 
-    @staticmethod
-    def add_options(blargs_parser: blargs.Parser):
-        add_non_required_options(blargs_parser)
-        add_required_options(blargs_parser)
+    @classmethod
+    def add_options(cls, blargs_parser: blargs.Parser):
+        cls.add_non_required_options(blargs_parser)
+        cls.add_required_options(blargs_parser)
 
         
-    @staticmethod
-    def add_non_required_options(blargs_parser: blargs.Parser):
+    @classmethod
+    def add_non_required_options(cls, blargs_parser: blargs.Parser):
         p = blargs_parser
         p.int("ntop_msd_results_to_dock").default(1)
         p.multiword("flags_files").shorthand("f").default("").cast(lambda x: x.split())
@@ -142,23 +205,45 @@ class MSDIntDesJobOptions:
         p.flag("fill_gen1_from_seeds").conflicts(sr)
         p.int("pop_size").default(100)
 
-    @staticmethod
-    def add_required_options(blargs_parser: blargs.Parser):
-        p = blargs_parser
-        opts = required_opts()
-        for opt in opts:
-            m = getattr(p, opt[0])
-            blarg_opt = m(p, opt[1])
-            for exmethod, args in opt[2]:
-                m = getattr(blarg_opt, exmethod)
-                m(blarg_opt, *args)
-        #p.str("job_name").shorthand("j").required()
-        #p.str("daf").shorthand("a").required()
+    @classmethod
+    def add_required_options(cls, blargs_parser: blargs.Parser):
+        add_required_opts_to_blargs_parser(blargs_parser, cls.required_opts())
 
-    @staticmethod
-    def required_opts():
-        return [ "str", "job_name", [("shorthand", ("j",))],
-                 "str", "daf", [("shorthand", ("a",))]]
+    @classmethod
+    def required_opts(cls):
+        return [("str", "job_name", [("shorthand", ("j",))]),
+                ("str", "daf", [("shorthand", ("a",))])]
+
+    def to_command_line(self):
+        args = []
+        args.append("--ntop_msd_results_to_dock")
+        args.append(str(self.ntop_msd_results_to_dock))
+        args.append("--flags_files")
+        args.extend(self.flags_files)
+        args.append("--w_dGdiff_bonus_weights_file")
+        args.append(self.w_dGdiff_bonus_weights_file)
+        args.append("--entfunc_weights_file")
+        args.append(self.entfunc_weights_file)
+        if self.preserve_DAF:
+            args.append("--preserve_DAF")
+        args.append("--positive_states")
+        args.append(self.positive_states)
+        args.append("--ngen_scale")
+        args.append(str(self.ngen_scale))
+        if len(self.seed_sequences) != 0:
+            args.append("--seed_sequences")
+            args.extend(self.seed_sequences)
+        if len(self.pdb_seed_pairs) != 0:
+            args.append("--pdb_seed_pairs")
+            args.extend(self.pdb_seed_pairs)
+        if self.single_round:
+            args.append("--single_round")
+        if self.fill_gen1_from_seeds:
+            args.append("--fill_gen1_from_seeds")
+        args.append("--pop_size")
+        args.append(str(self.pop_size))
+
+        return " ".join(args)
 
 
 class PostProcessingOpts:
@@ -179,17 +264,17 @@ class PostProcessingOpts:
         args.append(str(self.docking_n_cpu))
         return " ".join(args)
 
-    @staticmethod
-    def add_options(blargs_parser: blargs.Parser):
-        add_required_options(blargs_parser)
-        add_non_required_options(blargs_parser)
+    @classmethod
+    def add_options(cls, blargs_parser: blargs.Parser):
+        cls.add_required_options(blargs_parser)
+        cls.add_non_required_options(blargs_parser)
         
-    @staticmethod
-    def add_required_options(blargs_parser: blargs.Parser):
+    @classmethod
+    def add_required_options(cls, blargs_parser: blargs.Parser):
         pass
 
-    @staticmethod
-    def add_non_required_options(blargs_parser: blargs.Parser):
+    @classmethod
+    def add_non_required_options(cls, blargs_parser: blargs.Parser):
         p = blargs_parser
         p.multiword("docking_flags_files").default("").cast(lambda x: x.split())
         p.flag("relax")
@@ -277,9 +362,9 @@ class InterfaceMSDJob:
         self.flags_files = [resolve_abs_path(x) for x in msd_opts.flags_files]
         self.w_dGdiff_bonus_weights_file = resolve_abs_path(
             msd_opts.w_dGdiff_bonus_weights_file
-        ) if msd_opts.has_attr("w_dGdiff_bonus_weights_file") else ""
+        ) if hasattr(msd_opts,"w_dGdiff_bonus_weights_file") else ""
         self.daf = resolve_abs_path(msd_opts.daf)
-        self.entfunc_weights_file = resolve_abs_path(msd_opts.entfunc_weights_file) if msd_opts.hasattr("entfunc_weights_file") else ""
+        self.entfunc_weights_file = resolve_abs_path(msd_opts.entfunc_weights_file) if hasattr(msd_opts,"entfunc_weights_file") else ""
         self.preserve_DAF = msd_opts.preserve_DAF
         self.positive_states = msd_opts.positive_states
         self.ngen_scale = msd_opts.ngen_scale
