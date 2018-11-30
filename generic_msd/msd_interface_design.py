@@ -261,17 +261,6 @@ class PostProcessingOpts:
         self.relax = cl_opts.relax
         self.docking_n_cpu = cl_opts.docking_n_cpu
 
-    def to_command_line(self):
-        args = []
-        if self.docking_flags_files:
-            args.append("--docking_flags_files")
-            args.extend(self.docking_flags_files)
-        if self.relax:
-            args.append("--relax")
-        args.append("--docking_n_cpu")
-        args.append(str(self.docking_n_cpu))
-        return " ".join(args)
-
     @classmethod
     def add_options(cls, blargs_parser: blargs.Parser):
         cls.add_required_options(blargs_parser)
@@ -285,13 +274,23 @@ class PostProcessingOpts:
     def required_opts(cls):
         return []
 
-
     @classmethod
     def add_non_required_options(cls, blargs_parser: blargs.Parser):
         p = blargs_parser
         p.multiword("docking_flags_files").default("").cast(lambda x: x.split())
         p.flag("relax")
         p.int("docking_n_cpu").default(45)
+
+    def to_command_line(self):
+        args = []
+        if self.docking_flags_files:
+            args.append("--docking_flags_files")
+            args.extend(self.docking_flags_files)
+        if self.relax:
+            args.append("--relax")
+        args.append("--docking_n_cpu")
+        args.append(str(self.docking_n_cpu))
+        return " ".join(args)
 
 
 class InterfaceMSDJob:
@@ -310,12 +309,18 @@ class InterfaceMSDJob:
         raise NotImplementedError()
 
     def popsize(self):
-        return self.pop_size_
+        if self.single_round:
+            return len(self.seeds())
+        else:
+            return self.pop_size_
 
     def ngen(self):
         """Default implementation scales the number of generations by the number of
         designable positions, which is given by the design definition"""
-        return int(math.ceil(self.desdef_fnames.n_entities * self.ngen_scale))
+        if self.single_round:
+            return 1
+        else:
+            return int(math.ceil(self.desdef_fnames.n_entities * self.ngen_scale))
 
     def msd_flags(self, subdir):
         return self.flags_files
