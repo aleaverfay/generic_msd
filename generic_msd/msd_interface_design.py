@@ -279,7 +279,7 @@ class PostProcessingOpts:
         p = blargs_parser
         p.multiword("docking_flags_files").default("").cast(lambda x: x.split())
         p.flag("relax")
-        p.int("docking_n_cpu").default(45)
+        p.int("docking_n_cpu")
 
     def to_command_line(self):
         args = []
@@ -288,8 +288,9 @@ class PostProcessingOpts:
             args.extend(self.docking_flags_files)
         if self.relax:
             args.append("--relax")
-        args.append("--docking_n_cpu")
-        args.append(str(self.docking_n_cpu))
+        if self.docking_n_cpu:
+            args.append("--docking_n_cpu")
+            args.append(str(self.docking_n_cpu))
         return " ".join(args)
 
 
