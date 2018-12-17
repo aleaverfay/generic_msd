@@ -262,6 +262,7 @@ class MSDJobManager:
             "--pdb-complexes",
             "complex_sets.list",
             self.msd_job.post_processing_opts.to_command_line(),
+            self.msd_job.extra_post_processing_options(),
             "\n",
         ]
 
@@ -284,6 +285,8 @@ class MSDJobManager:
             os.path.join(self.base_dir, "pyscripts/dock_jobs_view.py"),
             "-l complex_sets.list -o after_docking_dGbind.txt",
             self.msd_job.post_processing_opts.to_command_line(),
+            self.msd_job.extra_post_processing_options(),
+            "\n"
             ])
         command_and_submission_script_for_job(
            dock_jobs_view_job_opts, dock_jobs_view_command_line

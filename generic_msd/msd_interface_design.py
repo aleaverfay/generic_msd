@@ -265,7 +265,7 @@ class PostProcessingOpts:
     def add_options(cls, blargs_parser: blargs.Parser):
         cls.add_required_options(blargs_parser)
         cls.add_non_required_options(blargs_parser)
-        
+
     @classmethod
     def add_required_options(cls, blargs_parser: blargs.Parser):
         add_required_opts_to_blargs_parser(blargs_parser, cls.required_opts())
@@ -353,6 +353,11 @@ class InterfaceMSDJob:
 
     def fitness_lines(self, subdir):
         raise NotImplementedError()
+
+    def extra_post_processing_options(self):
+        """Return a string containign additional options to be
+        passed to dock_jobs_run.py"""
+        return ""
 
     #######################################################
     # Interface between base class and concrete derived class
@@ -1228,6 +1233,7 @@ class MergeBBStateVersion(StateVersion):
                 with open(states_fname, "w") as fid:
                     fid.writelines(lines)
 
+        self.yaml_contents = raw
         self._determined_pdbs = True
 
 
