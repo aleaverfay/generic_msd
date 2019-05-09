@@ -70,8 +70,9 @@ def command_and_submission_script_for_job(
 
 
         script_lines = ["#!/bin/bash"]
+        script_lines.append("#SBATCH --tasks-per-node=44")
         script_lines.append("#SBATCH --job-name=%s" % job_options.job_name)
-        script_lines.append("#SBATCH --distribution=cyclic")
+        script_lines.append("#SBATCH --distribution=cyclic:cyclic")
         script_lines.append("#SBATCH --ntasks=%d" % job_options.num_nodes)
         script_lines.append("#SBATCH --output=%s" % job_options.logfilename)
         if (
@@ -95,7 +96,7 @@ def command_and_submission_script_for_job(
         script_lines.append( "#SBATCH --time=%02d-%02d:%02d" % job_options.timelimit )
         script_lines.append("\n")
         if job_options.mpi_job:
-            script_lines.append("srun -n $SLURM_NPROCS --mpi=pmi2 %s\n" % command_line)
+            script_lines.append("$MPI_HOME/bin/mpirun  %s\n" % command_line)
         else:
             script_lines.append(command_line + "\n")
         with open(job_options.submission_script_fname, "w") as fid:
