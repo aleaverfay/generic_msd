@@ -80,14 +80,14 @@ def command_and_submission_script_for_job(
         ):  # Figure out what queue to use based on the number of nodes
             # that have been requested for this job.
             if job_options.num_nodes < 45:
-                script_lines.append("#SBATCH --partition=debug_queue")
+                script_lines.append("#SBATCH --partition=cleanup_queue")
                 job_options.timelimit = (0,4,0)
             elif job_options.num_nodes < 529:
                 script_lines.append("#SBATCH --partition=528_queue")
             else:
                 script_lines.append("#SBATCH --partition=2112_queue")
         elif job_options.queue == "debug" or job_options.queue == "debug_queue":
-            script_lines.append("#SBATCH --partition=debug_queue")
+            script_lines.append("#SBATCH --partition=cleanup_queue")
             job_options.timelimit = (0,4,0)
         else:
             script_lines.append("#SBATCH --partition=%s" % job_options.queue)

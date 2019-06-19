@@ -634,6 +634,7 @@ class IsolateBBDesDefFnames(DesDefFnames):
             elif header == "entfunc":
                 self.entfunc = cols[1]
             else:
+                print("allowed species:", self.species.species())
                 raise ValueError(
                     "ERROR reading",
                     desdef_fname,
