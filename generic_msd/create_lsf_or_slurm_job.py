@@ -70,8 +70,9 @@ def command_and_submission_script_for_job(
 
 
         script_lines = ["#!/bin/bash"]
+        script_lines.append("#SBATCH --tasks-per-node=44")
         script_lines.append("#SBATCH --job-name=%s" % job_options.job_name)
-        script_lines.append("#SBATCH --distribution=cyclic")
+        script_lines.append("#SBATCH --distribution=cyclic:cyclic")
         script_lines.append("#SBATCH --ntasks=%d" % job_options.num_nodes)
         script_lines.append("#SBATCH --output=%s" % job_options.logfilename)
         if (
@@ -80,18 +81,22 @@ def command_and_submission_script_for_job(
             # that have been requested for this job.
             if job_options.num_nodes < 45:
                 script_lines.append("#SBATCH --partition=debug_queue")
+                job_options.timelimit = (0,4,0)
             elif job_options.num_nodes < 529:
                 script_lines.append("#SBATCH --partition=528_queue")
             else:
                 script_lines.append("#SBATCH --partition=2112_queue")
-        elif job_options.queue == "debug":
+        elif job_options.queue == "debug" or job_options.queue == "debug_queue":
             script_lines.append("#SBATCH --partition=debug_queue")
+            job_options.timelimit = (0,4,0)
         else:
             script_lines.append("#SBATCH --partition=%s" % job_options.queue)
-        # script_lines.append( "#SBATCH --time=%02d:%02d:%02d" % job_options.timelimit )
+        # TO DO:
+        # Logic to trim the time limit for the various dogwood queues
+        script_lines.append( "#SBATCH --time=%02d-%02d:%02d" % job_options.timelimit )
         script_lines.append("\n")
         if job_options.mpi_job:
-            script_lines.append("srun -n $SLURM_NPROCS --mpi=pmi2 %s\n" % command_line)
+            script_lines.append("$MPI_HOME/bin/mpirun  %s\n" % command_line)
         else:
             script_lines.append(command_line + "\n")
         with open(job_options.submission_script_fname, "w") as fid:

@@ -306,6 +306,7 @@ class PostProcessingOpts:
         self.docking_flags_files = [resolve_abs_path(x) for x in cl_opts.docking_flags_files]
         self.relax = cl_opts.relax
         self.docking_n_cpu = cl_opts.docking_n_cpu
+        self.docking_queue = cl_opts.docking_queue
 
     @classmethod
     def add_options(cls, blargs_parser: blargs.Parser):
@@ -326,6 +327,7 @@ class PostProcessingOpts:
         p.multiword("docking_flags_files").default("").cast(lambda x: x.split())
         p.flag("relax")
         p.int("docking_n_cpu")
+        p.str("docking_queue")
 
     def to_command_line(self):
         args = []
@@ -337,6 +339,9 @@ class PostProcessingOpts:
         if self.docking_n_cpu:
             args.append("--docking_n_cpu")
             args.append(str(self.docking_n_cpu))
+        if self.docking_queue:
+            args.append("--docking_queue")
+            args.append(self.docking_queue)
         return " ".join(args)
 
 
@@ -1273,10 +1278,10 @@ class MergeBBDesDefFnames(DesDefFnames):
             raw = yaml.load(fid)
         for spec in raw["species"]:
             spec_name = spec["name"]
-            #print("species:", spec_name)
             assert spec_name in self.species.species()
             spec_corr = spec["corr"]
             spec_2res = spec["2res"]
+            print("species:", spec_name, spec_corr, spec_2res)
             assert os.path.isfile(os.path.join(self.desdef_dir, spec_corr))
             assert os.path.isfile(os.path.join(self.desdef_dir, spec_2res))
             self.corr[spec_name] = spec_corr
