@@ -5,7 +5,39 @@ import traceback
 import yaml
 import itertools
 
+# The goal of the functionality provided in these classes is to make the work
+# requried to write the script for preparing and launching a set of multistate
+# design jobs relatively easy.
+# 
+# The "setup_jobs.py" script will look something like this:
+# 
+#     import (some things)
+# 
+#     si = ServerIdentifier()
+#     opts = OptHolder()
+#     with blargs.Parser(opts) as p:
+#         DerivedMSDJob.add_options(p)
+#         JobExecutionOptions.add_options(p)
+#
+#     msd_job = DerivedMSDJob(opts)
+#     msd_job_manager = MSDJobManager(msd_job, opts, si)
+#     msd_job_manager.prepare_job()
+#
+# and that's it.
+#
+# The programmer will define a class DerivedMSDJob, derived from either
+# the IsolateBBInterfaceMSDJob class or the MergeBBInterfaceMSDJob, and
+# with the DerivedMSDJob, a DerivedDesignSpecies class, derived from
+# either the IsolateBBDesignSpecies or the MergeBBDesignSpecies classes,
+# and a DerivedStateVersion class, derived from either the 
+# IsolateBBStateVersion or MergeBBStateVersion classes. These three
+# classes will specify how the design job should proceed in broad
+# strokes, where their base classes will do the heavy lifting.
+
+
 def resolve_abs_path(fname):
+    """Given a file name, resolve the absolute path for that file name
+    from the current working directory"""
     if len(fname) > 0 and fname[0] == "/":
         return fname
     else:
@@ -56,6 +88,8 @@ def add_opts_to_blargs_parser(
 
 
 class StateVersionOpts:
+    """The set of options that are needed to define the state version used in the design job"""
+
     @classmethod
     def add_options(cls, blargs_parser: blargs.Parser):
         cls.add_required_options(blargs_parser)
@@ -85,6 +119,8 @@ class StateVersionOpts:
 
 
 class DesignDefinitionOpts:
+    """The set of options that are needed to define the design definition used in the design job"""
+
     def __init__(self, opts):
         self.des_def = opts.des_def
         self.base_dir = opts.base_dir
@@ -114,6 +150,10 @@ class DesignDefinitionOpts:
 
 
 class DesignSpecies:
+    """This is a class that represents the set of species that are represented
+    in the design simulation. It's a very simple class, but fundamental for the
+    behavior of a lot of other classes."""
+
     def species(self):
         """Return a list of strings representing all the species in the system"""
         raise NotImplementedError()
@@ -123,7 +163,8 @@ class DesDefFnames:
     """The DesDefFNames class loads the information for each species about the
     correspondence file and secondary resfile that should be used for it. It loads
     the name of the entity resfile that will be used. It
-    also stores the entity function that should be used (if any)"""
+    also stores the entity function that should be used (if any). This is
+    the base class; the derived classes do most of the heavy lifting."""
 
     def __init__(self, opts: DesignDefinitionOpts, design_species: DesignSpecies):
         self.desdef_dir = os.path.join(
@@ -151,11 +192,16 @@ class StateVersion:
         self.design_species = design_species
 
     def nstates_total(self):
+        """Return the (integer) number of individual states that will be
+        simultaneously optimized by the multistate design algorithm. This
+        number will be used by the MSDJobManager to determine the number
+        of CPUs to request for running the each msd job"""
         raise NotImplementedError()
 
     def pdbs(self):
         """Return the complete list of all PDBs (without their path) that are to
-        be used in the design simulation"""
+        be used in the design simulation. These will be sim-linked by the
+        MSDJobManager into each directory where the MSD jobs will run"""
         raise NotImplementedError()
 
 
@@ -536,7 +582,7 @@ class IsolateBBDesignSpecies(DesignSpecies):
 class IsolateBBDesDefFnames(DesDefFnames):
     """The DesDefFNames class loads the information for each species about the
     correspondence file and secondary resfile that should be used for it. It
-    also stores the entity function that should be used (if any)"""
+    also stores the entity function that should be used (if any)."""
 
     def __init__(self, opts: DesignDefinitionOpts, design_species: DesignSpecies):
         super(IsolateBBDesDefFnames, self).__init__(opts, design_species)
@@ -645,43 +691,67 @@ class IsolateBBStateVersion(StateVersion):
     # derived class must provide
     ###############################################
     def valid_mut_statuses(self):
-        """Return a set of valid mut_status identifiers that can
-        appear in the neg_complexes.list and neg_backbones.list
-        files"""
+        """Return a set of valid mut_status identifiers (strings) that can
+        appear in the neg_complexes.list and neg_backbones.list files.
+        These identifiers are what the derived class will use to decide
+        which species the backbones should be used with, since not all
+        backbones can necessarily be used with all species"""
         raise NotImplementedError()
 
     def pdbs(self):
         """Return the complete list of all PDBs (without their path) that are to
-        be used in the design simulation"""
+        be used in the design simulation. These will be sim-linked by the
+        MSDJobManager into each directory where the MSD jobs will run"""
         raise NotImplementedError()
 
-    def pos_states(self):
-        """Return ???"""
+    def pdbs_for_species_for_bb(self, spec, bbname):
+        """Return the list of PDBs for a particular species that all have the same backbone.
+        This is the main function that the base class needs to invoke in order to create
+        the .states files. Once the .states files have been created, though, it is not
+        invoked again later. The derived class will be told what PDB files fall in what
+        category of use by the base class through the methods below:
+            * add_positive_complex
+            * add_positive_sep
+            * add_negative_complex
+            * add_negative_sep
+        along with the "mut status" identifier provided in the state definition input
+        file. The derived class must then use this information to later report which
+        PDB file should be used with which species when this function is called.
+        """
         raise NotImplementedError()
 
     def add_positive_complex(self, bbname, complex_pdb):
-        """Store a new positive complex, identified by its backbone name"""
+        """Store a new positive complex, identified by its backbone name. The
+        derived class must decide which species should use this complex
+        for later invocations of pdbs_for_species_for_bb.
+        """
         raise NotImplementedError()
 
     def add_positive_sep(self, bbname, sep_pdb):
-        """Store a new positive separated complex, identified by its backbone name"""
+        """Store a new positive separated complex, identified by its backbone name.
+        The derived class must decide which species should use this separated complex
+        for later invocations of pdbs_for_species_for_bb.
+        """
         raise NotImplementedError()
 
     def add_negative_complex(self, mut_status, bbname, complex_pdb):
-        """Store a negative complex, identified by its mut status and backbone name"""
+        """Store a negative complex, identified by its mut status and backbone name.
+        The derived class must decide which species should use this complex for
+        later invocations of pdbs_for_species_for_bb.
+        """
         raise NotImplementedError()
 
     def add_negative_sep(self, mut_status, bbname, sep_pdb):
-        """Store a negative separated complex, identified by its mut status and backbone name"""
+        """Store a negative separated complex, identified by its mut status
+        and backbone name. The derived class must decide which species should
+        use this complex for later invocations of pdbs_for_species_for_bb
+        """
         raise NotImplementedError()
 
     def separate_pdb(self, complex_pdb, sep_pdb):
         """Write a new PDB file to disk representing the separated structure of a
-        particular complex"""
-        raise NotImplementedError()
-
-    def pdbs_for_species_for_bb(self, spec, bbname):
-        """Return the list of PDBs for a particular species that all have the same backbone"""
+        particular complex. The derived class must read in the complex pdb
+        and then separate the chains appropriately."""
         raise NotImplementedError()
 
     def state_file_name(self, spec, bbname):
@@ -691,9 +761,17 @@ class IsolateBBStateVersion(StateVersion):
         return spec + "_for_" + bbname + ".states"
 
     def nstates_total(self):
+        """Return the (integer) number of individual states that will be
+        simultaneously optimized by the multistate design algorithm. This
+        number will be used by the MSDJobManager to determine the number
+        of CPUs to request for running the each msd job"""
         raise NotImplementedError()
 
-    ###########
+    ####################################################################
+    # Functions that this class implements to create the state files
+    # These functions are invoked by the IsolateBBInterfaceMSDJob
+    # class
+    ####################################################################
     def determine_pdbs(self):
         if self._pdbs_determined:
             return
@@ -713,7 +791,9 @@ class IsolateBBStateVersion(StateVersion):
                 # print "Creating state.list file for negative backbone bbname"
                 self.create_state_file_list_for_spec_and_bb(spec, bbname)
 
-    ########################################################
+    #####################################################################
+    # Functions that do the heavy lifting for this class
+    #####################################################################
 
     def create_state_file_list_for_spec_and_bb(self, spec, bbname):
         """This function is tasked with creating the .states file for a combination
@@ -898,6 +978,26 @@ class IsolateBBStateVersion(StateVersion):
 
 
 class IsolateBBInterfaceMSDJob(InterfaceMSDJob):
+    """The IsolateBBInterfaceMSDJob class defines the set of jobs
+    that will be run for the MSDJobManager. It's most difficult task
+    is to construct the fitness file for each of the jobs.
+
+    The fitness file it constructs is a combination of 1) lines it
+    generates based on the state version, and 2) lines provided by
+    the user that describe how the energies for the states should
+    be combined. See the fitness_lines function for more detail.
+
+    Classes that derive from IsolateBBInterfaceMSDJob need only
+    implement the following functions:
+        * create_design_species
+        * create_desdef_fnames
+        * create_state_version
+        * create_post_processing_options
+        * add_options (static; used by setup_jobs.py)
+        * 
+    """
+    
+
     def __init__(self, msd_opts: MSDIntDesJobOptions):
         super(IsolateBBInterfaceMSDJob, self).__init__(msd_opts)
         assert isinstance(self.design_species, IsolateBBDesignSpecies)

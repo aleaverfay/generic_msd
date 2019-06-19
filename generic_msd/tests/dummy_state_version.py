@@ -26,9 +26,6 @@ class dummy_state_version(IsolateBBStateVersion):
     def valid_mut_statuses(self):
         return set(["chAwt", "chBwt"])
 
-    def pos_states(self):
-        return self.pos_states
-
     def add_positive_complex(self, bbname, complex_name):
         self.pos_states[complex_name] = bbname
         self.all_pdbs.add(complex_name)
