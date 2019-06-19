@@ -30,12 +30,16 @@ class ServerIdentifier:
 
         hostname = socket.gethostname()
         if self._on_killdevil(hostname):
+            print("on killdevil")
             return KnownComputers.KILLDEVIL
         elif self._on_dogwood(hostname):
+            print("on dogwood")
             return KnownComputers.DOGWOOD
         elif hostname == "wiggins":
+            print("on wiggins")
             return KnownComputers.WIGGINS
         elif hostname.startswith("Lysis"):
+            print("on lysis")
             # we're on andrew's laptop
             return KnownComputers.ANDREWS_LAPTOP
         else:
