@@ -70,7 +70,7 @@ def command_and_submission_script_for_job(
 
 
         script_lines = ["#!/bin/bash"]
-        script_lines.append("#SBATCH --tasks-per-node=44")
+        # as of 8/16, this line causes problems script_lines.append("#SBATCH --tasks-per-node=44")
         script_lines.append("#SBATCH --job-name=%s" % job_options.job_name)
         script_lines.append("#SBATCH --distribution=cyclic:cyclic")
         script_lines.append("#SBATCH --ntasks=%d" % job_options.num_nodes)
