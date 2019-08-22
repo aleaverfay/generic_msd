@@ -68,6 +68,6 @@ class ServerIdentifier:
             return True
         elif hostname.startswith("c-"):
             node_num = int(hostname.split("-")[1])
-            return node_num >= 201 and node_num <= 209
+            return node_num >= 201 and node_num <= 211
         else:
             return False
