@@ -204,6 +204,11 @@ class StateVersion:
         MSDJobManager into each directory where the MSD jobs will run"""
         raise NotImplementedError()
 
+    def pose_energy_vector_lists(self):
+        """Return the list of files that will be used in a POSE_ENERGY_VECTOR
+        command of a fitness file for the relevant conformations that will
+        not be used in design"""
+        raise NotImplementedError()
 
 # class DesignDefinition:
 #    """Base class from which particular design defintion classes will derive"""
@@ -709,6 +714,11 @@ class IsolateBBStateVersion(StateVersion):
         be used in the design simulation. These will be sim-linked by the
         MSDJobManager into each directory where the MSD jobs will run"""
         raise NotImplementedError()
+
+    def pose_energy_vector_lists(self):
+        """Base class provides an effective no-op"""
+        return []
+
 
     def pdbs_for_species_for_bb(self, spec, bbname):
         """Return the list of PDBs for a particular species that all have the same backbone.
@@ -1310,7 +1320,7 @@ class MergeBBStateVersion(StateVersion):
         return self.count_n_states
 
     def determine_pdbs(self):
-        # read the all states.yaml file
+        # read the "states.yaml" file
         # this will give the species for each PDB file
         # there may be more than one PDB file per species
         self.pdbs_for_spec = {}
@@ -1328,6 +1338,18 @@ class MergeBBStateVersion(StateVersion):
                 self.pdbs_for_spec[spec] = []
             self.pdbs_for_spec[spec].append(pdb)
             self.all_pdbs.add(pdb)
+
+        for entry in raw["pose_energy_vector_lists"]:
+            fname = os.path.join(self.state_version_dir, entry)
+            with open(fname) as fid:
+                lines = fid.readlines()
+                for line in lines:
+                    if len(line) == 0:
+                        continue
+                    if line[0] == "#":
+                        continue
+                    pdb = line.strip()
+                    self.all_pdbs.add()
 
         # now, let's write the .states files if we haven't done so already
         for spec in self.design_species.species():
@@ -1355,6 +1377,7 @@ class MergeBBInterfaceMSDJob(InterfaceMSDJob):
         svdir = self.state_version.state_version_dir
         pdbs = [os.path.join(svdir, pdb) for pdb in self.state_version.pdbs()]
         state_files = [os.path.join(svdir, spec + ".states") for spec in species]
+        pevs = [os.path.join(svdir, fname) for fname in self.state_version.pose_energy_vector_lists()]
 
         desdefdir = self.desdef_fnames.desdef_dir
         corr_pairs = [
@@ -1369,8 +1392,8 @@ class MergeBBInterfaceMSDJob(InterfaceMSDJob):
             for spec in species
         ]
 
-        pdb_state_and_flag_pairs = [
-            (x, ".") for x in itertools.chain(pdbs, state_files, self.flags_files)
+        pdb_state_flag_and_pev_pairs = [
+            (x, ".") for x in itertools.chain(pdbs, state_files, self.flags_files, pevs)
         ]
 
         extras = []
@@ -1389,7 +1412,7 @@ class MergeBBInterfaceMSDJob(InterfaceMSDJob):
 
         return list(
             itertools.chain(
-                pdb_state_and_flag_pairs, corr_pairs, secres_pairs, extras
+                pdb_state_flag_and_pev_pairs, corr_pairs, secres_pairs, extras
             )
         )
 
