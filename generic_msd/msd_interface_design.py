@@ -501,8 +501,9 @@ class InterfaceMSDJob:
         return float(cols[-1][:-3])
 
     def replace_wscan_and_add_entfunc_to_fitness_func(self, subdir, orig_lines):
-        """Replace the WSCAN and add in an ENTITY_FUNCTION line ahead of the FITNESS line
-        if the design definition files includes and entity function."""
+        """Replace the "%(WSCAN)s" string and add in an ENTITY_FUNCTION line
+        ahead of the FITNESS line if the design definition files includes and
+        entity function."""
 
         dG_bonus_weight = self.dG_bonus_weight_from_subdir_name(subdir)
         w_ent_func = self.entfunc_weight_from_subdir_name(subdir)
@@ -1286,9 +1287,11 @@ class MergeBBDesDefFnames(DesDefFnames):
 
     def _read_from_file(self, fname):
         with open(fname) as fid:
-            raw = yaml.load(fid)
+            raw = yaml.load(fid, Loader=yaml.Loader)
         for spec in raw["species"]:
             spec_name = spec["name"]
+            if spec_name not in self.species.species():
+                print("spec name not found:", spec_name)
             assert spec_name in self.species.species()
             spec_corr = spec["corr"]
             spec_2res = spec["2res"]
@@ -1308,6 +1311,7 @@ class MergeBBStateVersion(StateVersion):
         super(MergeBBStateVersion, self).__init__(opts, design_species)
         self._determined_pdbs = False
         self.count_n_states = 0
+        self.pev_lists = []
 
     def pdbs(self):
         if not self._determined_pdbs:
@@ -1319,6 +1323,9 @@ class MergeBBStateVersion(StateVersion):
             self.determine_pdbs()
         return self.count_n_states
 
+    def pose_energy_vector_lists(self):
+        return self.pev_lists
+
     def determine_pdbs(self):
         # read the "states.yaml" file
         # this will give the species for each PDB file
@@ -1327,7 +1334,7 @@ class MergeBBStateVersion(StateVersion):
         self.all_pdbs = set([])
         fname = os.path.join(self.state_version_dir, "states.yaml")
         with open(fname) as fid:
-            raw = yaml.load(fid)
+            raw = yaml.load(fid, Loader=yaml.Loader)
         for entry in raw["pdbs"]:
             self.count_n_states += 1
             spec = entry["species"]
@@ -1349,7 +1356,8 @@ class MergeBBStateVersion(StateVersion):
                     if line[0] == "#":
                         continue
                     pdb = line.strip()
-                    self.all_pdbs.add()
+                    self.all_pdbs.add(pdb)
+            self.pev_lists.append(fname)
 
         # now, let's write the .states files if we haven't done so already
         for spec in self.design_species.species():
