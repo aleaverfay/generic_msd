@@ -11,7 +11,13 @@ class SchedulerType(Enum):
 
 def scheduler_type_for_server(si: ServerIdentifier):
     server = si.what_computer()
-    assert server == KnownComputers.KILLDEVIL or server == KnownComputers.DOGWOOD
+    assert (
+        server == KnownComputers.KILLDEVIL or
+        server == KnownComputers.DOGWOOD or
+        server == KnownComputers.LONGLEAF
+    )
+
+    # slurm on longleaf and DOGWOOD
     return (
         SchedulerType.LSF_SCHEDULER
         if server == KnownComputers.KILLDEVIL
@@ -20,6 +26,7 @@ def scheduler_type_for_server(si: ServerIdentifier):
 
 class SubmissionOptions:
     def __init__(self):
+        self.server = None
         self.scheduler = SchedulerType.LSF_SCHEDULER
         self.num_nodes = 0
         self.queue = "auto"
@@ -28,6 +35,42 @@ class SubmissionOptions:
         self.timelimit = (1, 0, 0)
         self.submission_script_fname = ""
         self.mpi_job = False
+
+
+def resolve_slurm_partition(job_options: SubmissionOptions):
+    print("resolve slurm partition!")
+    if job_options.server is None:
+        si = ServerIdentifier()
+        job_options.server = si.what_computer()
+
+    assert (
+        job_options.server == KnownComputers.DOGWOOD or
+        job_options.server == KnownComputers.LONGLEAF )
+
+    print("server", job_options.server)
+    
+    if job_options.server == KnownComputers.DOGWOOD:
+        if (
+            job_options.queue == "auto"
+        ):  # Figure out what queue to use based on the number of nodes
+            # that have been requested for this job.
+            if job_options.num_nodes < 45:
+                job_options.queue = "cleanup_queue"
+                job_options.timelimit = (0,4,0)
+            elif job_options.num_nodes < 529:
+                job_options.queue = "528_queue"
+            else:
+                job_options.queue = "2112_queue"
+        elif job_options.queue == "debug" or job_options.queue == "debug_queue":
+            job_options.queue = "cleanup_queue"
+            job_options.timelimit = (0,4,0)
+    elif job_options.server == KnownComputers.LONGLEAF:
+        if job_options.mpi_job:
+            job_options.queue = "SNP"
+            if job_options.num_nodes > 24:
+                job_options.num_nodes = 24
+        elif job_options.queue == "auto":
+            job_options.queue = "general"
 
 
 def command_and_submission_script_for_job(
@@ -68,6 +111,7 @@ def command_and_submission_script_for_job(
     else:
         assert job_options.scheduler == SchedulerType.SLURM_SCHEDULER
 
+        resolve_slurm_partition(job_options)
 
         script_lines = ["#!/bin/bash"]
         # as of 8/16, this line causes problems script_lines.append("#SBATCH --tasks-per-node=44")
@@ -75,24 +119,8 @@ def command_and_submission_script_for_job(
         script_lines.append("#SBATCH --distribution=cyclic:cyclic")
         script_lines.append("#SBATCH --ntasks=%d" % job_options.num_nodes)
         script_lines.append("#SBATCH --output=%s" % job_options.logfilename)
-        if (
-            job_options.queue == "auto"
-        ):  # Figure out what queue to use based on the number of nodes
-            # that have been requested for this job.
-            if job_options.num_nodes < 45:
-                script_lines.append("#SBATCH --partition=cleanup_queue")
-                job_options.timelimit = (0,4,0)
-            elif job_options.num_nodes < 529:
-                script_lines.append("#SBATCH --partition=528_queue")
-            else:
-                script_lines.append("#SBATCH --partition=2112_queue")
-        elif job_options.queue == "debug" or job_options.queue == "debug_queue":
-            script_lines.append("#SBATCH --partition=cleanup_queue")
-            job_options.timelimit = (0,4,0)
-        else:
-            script_lines.append("#SBATCH --partition=%s" % job_options.queue)
-        # TO DO:
-        # Logic to trim the time limit for the various dogwood queues
+        script_lines.append("#SBATCH --partition=%s" % job_options.queue)
+
         script_lines.append( "#SBATCH --time=%02d-%02d:%02d" % job_options.timelimit )
         script_lines.append("\n")
         if job_options.mpi_job:
