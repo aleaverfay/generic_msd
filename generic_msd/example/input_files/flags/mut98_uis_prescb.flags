@@ -1,0 +1,4 @@
+-use_input_sc
+-ms::fraction_by_recombination 0.02
+-preserve_c_beta
+-mute core.pack.annealer.MultiCoolAnnealer

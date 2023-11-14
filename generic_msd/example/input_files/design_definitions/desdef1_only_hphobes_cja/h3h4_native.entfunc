@@ -1,0 +1,88 @@
+# original AH3_AH4 sequence for this design definition in 1KX5_chAB.pdb is given by
+# AAAYFVAVLRLF
+# original BH3_BH4 sequence for this design definition in 1KX5_chAB.pdb is given by
+# AAAYFVAVLRLF
+
+# entity element ee_1 corresponds to AA88: A 
+SET_CONDITION ee1nat = ee_1 in { A }
+
+# entity element ee_2 corresponds to BA88: A 
+SET_CONDITION ee2nat = ee_2 in { A }
+
+# entity element ee_3 corresponds to AA91: A 
+SET_CONDITION ee3nat = ee_3 in { A }
+
+# entity element ee_4 corresponds to BA91: A 
+SET_CONDITION ee4nat = ee_4 in { A }
+
+# entity element ee_5 corresponds to AA95: A 
+SET_CONDITION ee5nat = ee_5 in { A }
+
+# entity element ee_6 corresponds to BA95: A 
+SET_CONDITION ee6nat = ee_6 in { A }
+
+# entity element ee_7 corresponds to AA99: Y 
+SET_CONDITION ee7nat = ee_7 in { Y }
+
+# entity element ee_8 corresponds to BA99: Y 
+SET_CONDITION ee8nat = ee_8 in { Y }
+
+# entity element ee_9 corresponds to AB61: F 
+SET_CONDITION ee9nat = ee_9 in { F }
+
+# entity element ee_10 corresponds to BB61: F 
+SET_CONDITION ee10nat = ee_10 in { F }
+
+# entity element ee_11 corresponds to AB65: V 
+SET_CONDITION ee11nat = ee_11 in { V }
+
+# entity element ee_12 corresponds to BB65: V 
+SET_CONDITION ee12nat = ee_12 in { V }
+
+# entity element ee_13 corresponds to AB83: A 
+SET_CONDITION ee13nat = ee_13 in { A }
+
+# entity element ee_14 corresponds to BB83: A 
+SET_CONDITION ee14nat = ee_14 in { A }
+
+# entity element ee_15 corresponds to AB86: V 
+SET_CONDITION ee15nat = ee_15 in { V }
+
+# entity element ee_16 corresponds to BB86: V 
+SET_CONDITION ee16nat = ee_16 in { V }
+
+# entity element ee_17 corresponds to AB90: L 
+SET_CONDITION ee17nat = ee_17 in { L }
+
+# entity element ee_18 corresponds to BB90: L 
+SET_CONDITION ee18nat = ee_18 in { L }
+
+# entity element ee_19 corresponds to AB95: R 
+SET_CONDITION ee19nat = ee_19 in { R }
+
+# entity element ee_20 corresponds to BB95: R 
+SET_CONDITION ee20nat = ee_20 in { R }
+
+# entity element ee_21 corresponds to AB97: L 
+SET_CONDITION ee21nat = ee_21 in { L }
+
+# entity element ee_22 corresponds to BB97: L 
+SET_CONDITION ee22nat = ee_22 in { L }
+
+# entity element ee_23 corresponds to AB100: F 
+SET_CONDITION ee23nat = ee_23 in { F }
+
+# entity element ee_24 corresponds to BB100: F 
+SET_CONDITION ee24nat = ee_24 in { F }
+
+SUB_EXPRESSION nnatA = ee1nat + ee3nat + ee5nat + ee7nat + ee9nat + ee11nat + ee13nat + ee15nat + ee17nat + ee19nat + ee21nat + ee23nat
+SUB_EXPRESSION nnatB = ee2nat + ee4nat + ee6nat + ee8nat + ee10nat + ee12nat + ee14nat + ee16nat + ee18nat + ee20nat + ee22nat + ee24nat
+SUB_EXPRESSION nmutA = 12 - nnatA
+
+SUB_EXPRESSION nmutB = 12 - nnatB
+
+SUB_EXPRESSION mut_penaltyA = ite( gt( nmutA, 6 ), nmutA - 6, 0 )
+
+SUB_EXPRESSION mut_penaltyB = ite( gt( nmutB, 6 ), nmutB - 6, 0 )
+
+SCORE 2.000000 * ( mut_penaltyA + mut_penaltyB)

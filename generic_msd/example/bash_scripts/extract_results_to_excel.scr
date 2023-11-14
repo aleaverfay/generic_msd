@@ -1,0 +1,261 @@
+#!/bin/bash
+
+# $1 == the list of pdbs that should be cataloged.
+# these should be all of the AH3_AH4 output pdbs that
+# end up in the best_docked directory
+# e.g.
+# > ls frwt_v0_dd1_run1/results/best_docked/*AH3_AH4*.pdb > tmp_listfile
+# > ~/rosetta/orthogonal_nucleosome/h3h4/killdevil_setup/setup_scheme1/bash_scripts/extract_results_to_excel.scr tmp_listfile
+
+# this script is to extract the results from redesigning the  h3 / h4 interface;
+
+# strategy:
+# pull in all the data into a single multi-column temp file, and then feed the contents
+# of that file to pbcopy so that it can be loaded into excel
+
+
+listfile=$1
+base_dir="/Users/andrew/rosetta/orthogonal_nucleosome/h3h4/killdevil_setup/twomutpairs_merge_RINC/"
+h3h4_pdb=${base_dir}/input_files/starting_structures/1kx5/1KX5_chAB.pdb
+
+# the run directory
+for i in $( cat $listfile ); do
+    rundir=$( echo $i | sed 's:/: :g' | awk '{print $1}' );
+    subdir=$( echo $i | sed 's:/: :g' | awk '{print $4}' | sed 's:Ent_:Ent :' | awk '{print $1}' | sed 's:dock_::' );
+    run_number=$( echo $i | sed 's:/: :g' | awk '{print $4}' | sed 's:Ent_:Ent :' | sed 's:_AH3_AH4.pdb::' | awk '{print $2}' );
+    echo $rundir,$subdir,$run_number
+done > tmp3
+
+# get the mutations
+rm AH3_AH4_muts.txt BH3_BH4_muts.txt
+for i in $( cat $listfile ); do
+    # AH3_AH4:
+    python ${base_dir}/pyscripts/compare_h3h4_sequence.py --design $i --reference_pdb ${h3h4_pdb} --compact >> AH3_AH4_muts.txt
+    # BH3_BH4:
+    bh3_bh4_des=$( echo $i | sed 's:AH3_AH4:BH3_BH4:' )
+    python ${base_dir}/pyscripts/compare_h3h4_sequence.py --design ${bh3_bh4_des} --reference_pdb ${h3h4_pdb} --compact >> BH3_BH4_muts.txt
+done
+
+# read the msd log files; grab the total energy of the favored species and the binding energies of all four species
+rm msd_vals.txt
+for i in $( cat $listfile ); do
+    # what's the name of the log file we want?
+    rundir=$( echo $i | sed 's:/: :g' | awk '{print $1}' )
+    subdir=$( echo $i | sed 's:/: :g' | awk '{print $4}' | sed 's:Ent_:Ent :' | awk '{print $1}' | sed 's:dock_::' )
+    logfile=$( ls $rundir/$subdir/*.log )
+    run_number=$( echo $i | sed 's:/: :g' | awk '{print $4}' | sed 's:Ent_:Ent :' | sed 's:_AH3_AH4.pdb::' | awk '{print $2}' );
+
+    #cmd=$( echo "python ${base_dir}/pyscripts/read_msd_log.py --logfile $logfile --output_index $run_number --energies_by_match AH_AL BH_BL --requested_vals dGbind_AA dGbind_BB dGbind_AB dGbind_BA dGbind_AWT dGbind_BWT dGbind_WTA dGbind_WTB" )
+    # just for this one run, do not extract the total energies of the on-target interactions, since they were not stored
+    cmd=$( echo "python ${base_dir}/pyscripts/read_msd_log.py --logfile $logfile --output_index $run_number --requested_vals bestAA bestBB dGbind_AA dGbind_BB dGbind_AB dGbind_BA dGbind_AWT dGbind_BWT dGbind_WTA dGbind_WTB" )
+    #echo $cmd
+    $cmd >> msd_vals.txt
+done
+
+# grep out the pose energies from the docking pdbs
+# rm docking_total_energies.txt
+# for i in $( cat $listfile ); do
+#     echo $( grep pose $i | awk '{print $NF}' ) $( grep pose $( echo $i | sed 's:AH3_AH4:BH3_BH4:' ) | awk '{print $NF}' ) >> docking_total_energies.txt;
+# done
+
+# average the top ten energies of the relaxed / redocked structures whose energies were reported in the score.sc files
+rm docking_total_energies.txt
+for i in $( cat $listfile ); do
+    rundir=$( echo $i | sed 's:/: :g' | awk '{print $1}' )
+    subdir=$( echo $i | sed 's:/: :g' | awk '{print $4}' | sed ':Ent_:Ent :' | awk '{print $1}' | sed 's:_._MH3_MH4.pdb::' | sed 's:dock_::' )
+    run_number=$( echo $i | sed 's:/: :g' | awk '{print $4}' | sed 's:Ent_:Ent :' | sed 's:_MH3_MH4.pdb::' | awk '{print $2}' )
+    #echo $rundir $subdir $run_number
+    AA_totE=$( awk 'NR>1 {print $2}' $rundir/results/dock/${subdir}_${run_number}_AH3_AH4_ctxt/score.sc | sort -nk 1 | head | awk '{sum += $1} END {print sum/10}')
+    BB_totE=$( awk 'NR>1 {print $2}' $rundir/results/dock/${subdir}_${run_number}_BH3_BH4_ctxt/score.sc | sort -nk 1 | head | awk '{sum += $1} END {print sum/10}')
+    #echo $MM_totE
+    echo $AA_totE $BB_totE >> docking_total_energies.txt
+done
+
+
+# organize the contents of the after_docking_dGbind.txt files
+rm after_docking.dat
+for i in $( cat $listfile ); do
+    rundir=$( echo $i | sed 's:/: :g' | awk '{print $1}' )
+    pdbname=$( echo $i | sed 's:/: :g' | awk '{print $4}' | sed 's:dock_::' )
+    grep $pdbname $rundir/results/best_docked/after_docking_dGbind.txt | sed 's:,::g' >> after_docking.dat
+done 
+
+    
+# TEMP ! awk -F "," '{print $1}' tmp3 | pbcopy
+# TEMP ! echo "the run directory"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk -F "," '{print $2}' tmp3 | pbcopy
+# TEMP ! echo "the subdirectory"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk -F "," '{print $3}' tmp3 | pbcopy
+# TEMP ! echo "the design number"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! echo "for the creation_command"
+# TEMP ! for i in $( cat $listfile ); do rundir=`echo $i | sed 's:/: :g' | awk '{print $1}'`; cat $rundir/creation_command.txt; done | pbcopy
+# TEMP ! echo "done"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! IFS=$'\n'
+# TEMP ! for i in `cat AH3_AH4_muts.txt`; do
+# TEMP !     echo $i | sed 's:chB:%:' | tr '%' '\n' | head -n 1 | sed 's:chA::' | awk '{print NF}'
+# TEMP ! done | pbcopy
+# TEMP ! echo "the number of chain AH3 mutations"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! for i in `cat AH3_AH4_muts.txt`; do
+# TEMP !     echo $i | sed 's:chB:%:' | tr '%' '\n' | tail -n 1 | sed 's:chB::' | awk '{print NF}'
+# TEMP ! done | pbcopy
+# TEMP ! echo "the number of chain AH4 mutations"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! for i in `cat AH3_AH4_muts.txt`; do
+# TEMP !     echo $i | sed 's:chB::' | sed 's:chA::' | awk '{print NF}'
+# TEMP ! done | pbcopy
+# TEMP ! echo "the total number of chain AH3_AH4 mutations"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! for i in `cat BH3_BH4_muts.txt`; do
+# TEMP !     echo $i | sed 's:chB:%:' | tr '%' '\n' | head -n 1 | sed 's:chA::' | awk '{print NF}'
+# TEMP ! done | pbcopy
+# TEMP ! echo "the number of chain BH3 mutations"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! for i in `cat BH3_BH4_muts.txt`; do
+# TEMP !     echo $i | sed 's:chB:%:' | tr '%' '\n' | tail -n 1 | sed 's:chA::' | awk '{print NF}'
+# TEMP ! done | pbcopy
+# TEMP ! echo "the number of chain BH4 mutations"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! for i in `cat BH3_BH4_muts.txt`; do
+# TEMP !     echo $i | sed 's:chA::' | sed 's:chB::' | awk '{print NF}'
+# TEMP ! done | pbcopy
+# TEMP ! echo "the total number of chain BH3_BH4 mutations"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $1}' msd_vals.txt | pbcopy
+# TEMP ! #echo "0" | pbcopy
+# TEMP ! echo "MSD AH3_AH4 final energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $2}' msd_vals.txt | pbcopy
+# TEMP ! #echo "0" | pbcopy
+# TEMP ! echo "MSD BH3_BH4 final energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $3}' msd_vals.txt | pbcopy
+# TEMP ! echo "MSD AH3_AH4 dGbind"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $4}' msd_vals.txt | pbcopy
+# TEMP ! echo "MSD BH3_BH4 dGbind"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $5}' msd_vals.txt | pbcopy
+# TEMP ! echo "MSD AH3_BH4 dGbind"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $6}' msd_vals.txt | pbcopy
+# TEMP ! echo "MSD BH3_AH4 dGbind"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $7}' msd_vals.txt | pbcopy
+# TEMP ! echo "MSD AH3_WTH4 dGbind"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $8}' msd_vals.txt | pbcopy
+# TEMP ! echo "MSD BH3_WTH4 dGbind"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $9}' msd_vals.txt | pbcopy
+# TEMP ! echo "MSD WTH3_ATH4 dGbind"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $10}' msd_vals.txt | pbcopy
+# TEMP ! echo "MSD WTH3_BH4 dGbind"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! #awk '{print $9}' msd_vals.txt | pbcopy
+# TEMP ! #echo "MSD WTH3_AH4 dGbind"
+# TEMP ! #~/bin/wait_for_input.scr
+# TEMP ! #
+# TEMP ! #awk '{print $10}' msd_vals.txt | pbcopy
+# TEMP ! #echo "MSD WTH3_BH4 dGbind"
+# TEMP ! #~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $1}' docking_total_energies.txt | pbcopy
+# TEMP ! echo "After docking AH_AL total energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $2}' docking_total_energies.txt | pbcopy
+# TEMP ! echo "After docking BH_BL total energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $2}' after_docking.dat | pbcopy
+# TEMP ! echo "After docking AH3_AH4 binding energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $3}' after_docking.dat | pbcopy
+# TEMP ! echo "After docking BH3_BH4 binding energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $4}' after_docking.dat | pbcopy
+# TEMP ! echo "After docking AH3_BH4 binding energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $5}' after_docking.dat | pbcopy
+# TEMP ! echo "After docking BH3_AH4 binding energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $6}' after_docking.dat | pbcopy
+# TEMP ! echo "After docking AH3_WTH4 binding energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $7}' after_docking.dat | pbcopy
+# TEMP ! echo "After docking BH3_WTH4 binding energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $8}' after_docking.dat | pbcopy
+# TEMP ! echo "After docking WTH3_AH4 binding energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $9}' after_docking.dat | pbcopy
+# TEMP ! echo "After docking WTH3_BH4 binding energy"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $11}' after_docking.dat | pbcopy
+# TEMP ! echo "AH3_BH4 binding energy gap"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $12}' after_docking.dat | pbcopy
+# TEMP ! echo "BH3_AH4 binding energy gap"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $15}' after_docking.dat | pbcopy
+# TEMP ! echo "AH3_WTH4 binding energy gap"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $16}' after_docking.dat | pbcopy
+# TEMP ! echo "BH3_WTH4 binding energy gap"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $17}' after_docking.dat | pbcopy
+# TEMP ! echo "WTH3_AH4 binding energy gap"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! awk '{print $18}' after_docking.dat | pbcopy
+# TEMP ! echo "WTH3_BH4 binding energy gap"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! cat AH3_AH4_muts.txt | pbcopy
+# TEMP ! echo "AH3_AH4 mutations"
+# TEMP ! ~/bin/wait_for_input.scr
+# TEMP ! 
+# TEMP ! cat BH3_BH4_muts.txt | pbcopy
+# TEMP ! echo "BH3_BH4 mutations"
+# TEMP ! ~/bin/wait_for_input.scr
+
+
+

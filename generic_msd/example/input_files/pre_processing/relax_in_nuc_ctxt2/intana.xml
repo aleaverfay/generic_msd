@@ -1,0 +1,57 @@
+<ROSETTASCRIPTS>
+  <SCOREFXNS>
+    <ScoreFunction name="ref2015" weights="ref2015.wts"/>
+  </SCOREFXNS>
+  <RESIDUE_SELECTORS>
+    <Chain name="h3h4" chains="A,B"/>
+    <Not name="not_h3h4" selector="h3h4"/>
+    <InterfaceByVector name="h3h4_vs_surroundings" grp1_selector="h3h4" grp2_selector="not_h3h4"/>
+    <Or name="h3h4_and_surroundings" selectors="h3h4,h3h4_vs_surroundings"/>
+    <Not name="not_h3h4_or_interface" selector="h3h4_and_surroundings"/>
+  </RESIDUE_SELECTORS>
+  <JUMP_SELECTORS>
+    <JumpIndex name="jump2" jump="2"/>
+    <JumpIndex name="jump3" jump="3"/>
+  </JUMP_SELECTORS>
+  <TASKOPERATIONS>
+    <OperateOnResidueSubset name="onlypack_h3h4" selector="not_h3h4_or_interface">
+      <PreventRepackingRLT/>
+    </OperateOnResidueSubset>
+    ReadResfile name=mut1 filename=mut1.resfile
+  </TASKOPERATIONS>
+  <FILTERS>
+  </FILTERS>
+  <MOVE_MAP_FACTORIES>
+    <MoveMapFactory name="just_h3h4" bb="0" chi="0" jumps="0">
+      <Backbone residue_selector="h3h4"/>
+      <Chi residue_selector="h3h4_and_surroundings"/>
+      <Jumps jump_selector="jump2"/>
+      <Jumps jump_selector="jump3"/>
+    </MoveMapFactory>
+  </MOVE_MAP_FACTORIES>
+  <MOVERS>
+    <DeleteChain name="delete_chainH" chain="9"/> 
+    <DeleteChain name="delete_chainG" chain="8"/> 
+    <DeleteChain name="delete_chainE" chain="7"/> 
+    <DeleteChain name="delete_chainD" chain="6"/> 
+    <DeleteChain name="delete_chainC" chain="5"/> 
+    <DeleteChain name="delete_chainJ" chain="2"/> 
+    <DeleteChain name="delete_chainI" chain="1"/> 
+    <InterfaceAnalyzerMover name="analyze_h3h4_nuc" scorefxn="ref2015" interface="AB_IJCDEGH" packstat="1" pack_input="1" pack_separated="1" tracer="0" use_jobname="1" resfile="0" scorefile_reporting_prefix="pair_v_nuc" />
+    <InterfaceAnalyzerMover name="analyze_h3_h4" scorefxn="ref2015" interface="A_B" packstat="1" pack_input="1" pack_separated="1" tracer="0" use_jobname="1" resfile="0" scorefile_reporting_prefix="h3_v_h4"/>
+  </MOVERS>
+  <APPLY_TO_POSE>
+  </APPLY_TO_POSE>
+  <PROTOCOLS>
+    <Add mover="analyze_h3h4_nuc"/>
+    <Add mover="delete_chainH"/>
+    <Add mover="delete_chainG"/>
+    <Add mover="delete_chainE"/>
+    <Add mover="delete_chainD"/>
+    <Add mover="delete_chainC"/>
+    <Add mover="delete_chainJ"/>
+    <Add mover="delete_chainI"/>
+    <Add mover="analyze_h3_h4"/>
+  </PROTOCOLS>
+  <OUTPUT scorefxn="ref2015"/>
+</ROSETTASCRIPTS>

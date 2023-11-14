@@ -1,0 +1,67 @@
+STATE_VECTOR AH3_AH4  AH3_AH4.states
+STATE_VECTOR BH3_BH4  BH3_BH4.states
+STATE_VECTOR AH3_BH4  AH3_BH4.states
+STATE_VECTOR BH3_AH4  BH3_AH4.states
+STATE_VECTOR AH3_WTH4 AH3_WTH4.states
+STATE_VECTOR BH3_WTH4 BH3_WTH4.states
+STATE_VECTOR WTH3_AH4 WTH3_AH4.states
+STATE_VECTOR WTH3_BH4 WTH3_BH4.states
+STATE_VECTOR AH3m AH3m.states
+STATE_VECTOR BH3m BH3m.states
+STATE_VECTOR AH4m AH4m.states
+STATE_VECTOR BH4m BH4m.states
+
+POSE_ENERGY_VECTOR WTH3m WTH3.list
+POSE_ENERGY_VECTOR WTH4m WTH4.list
+
+SCALAR_EXPRESSION bestAA  = vmin( AH3_AH4  )
+SCALAR_EXPRESSION bestBB  = vmin( BH3_BH4  ) 
+SCALAR_EXPRESSION bestAB  = vmin( AH3_BH4  ) 
+SCALAR_EXPRESSION bestBA  = vmin( BH3_AH4  ) 
+SCALAR_EXPRESSION bestAWT = vmin( AH3_WTH4 ) 
+SCALAR_EXPRESSION bestBWT = vmin( BH3_WTH4 ) 
+SCALAR_EXPRESSION bestWTA = vmin( WTH3_AH4 ) 
+SCALAR_EXPRESSION bestWTB = vmin( WTH3_BH4 ) 
+SCALAR_EXPRESSION bestAH3 = vmin( AH3m ) 
+SCALAR_EXPRESSION bestBH3 = vmin( BH3m ) 
+SCALAR_EXPRESSION bestAH4 = vmin( AH4m ) 
+SCALAR_EXPRESSION bestBH4 = vmin( BH4m )
+SCALAR_EXPRESSION bestWTH3 = vmin( WTH3m )
+SCALAR_EXPRESSION bestWTH4 = vmin( WTH4m )
+
+
+SCALAR_EXPRESSION dGbind_AA  = bestAA - bestAH3 - bestAH4
+SCALAR_EXPRESSION dGbind_BB  = bestBB - bestBH3 - bestBH4
+SCALAR_EXPRESSION dGbind_AB  = bestAB - bestAH3 - bestBH4
+SCALAR_EXPRESSION dGbind_BA  = bestBA - bestBH3 - bestAH4
+SCALAR_EXPRESSION dGbind_AWT = bestAWT - bestAH3 - bestWTH4
+SCALAR_EXPRESSION dGbind_BWT = bestBWT - bestBH3 - bestWTH4
+SCALAR_EXPRESSION dGbind_WTA = bestWTA - bestWTH3 - bestAH4
+SCALAR_EXPRESSION dGbind_WTB = bestWTB - bestWTH3 - bestBH4
+
+SCALAR_EXPRESSION decent_dGbind =   -150
+SCALAR_EXPRESSION AA_decent = lt( dGbind_AA, decent_dGbind )
+SCALAR_EXPRESSION AA_indecent = not( AA_decent )
+SCALAR_EXPRESSION BB_decent = lt( dGbind_BB, decent_dGbind )
+SCALAR_EXPRESSION BB_indecent = not( BB_decent )
+
+# apply a bonus to that rewards the destabilization of the off-target species
+SCALAR_EXPRESSION desired_off_target_dGbind = -165
+SCALAR_EXPRESSION off_target_destab_start =   -200
+SCALAR_EXPRESSION destab_AB_bonus = AA_decent * BB_decent * ( off_target_destab_start - ite( lt( dGbind_AB, desired_off_target_dGbind ), dGbind_AB, 0.0 * dGbind_AB + desired_off_target_dGbind ))
+SCALAR_EXPRESSION destab_BA_bonus = AA_decent * BB_decent * ( off_target_destab_start - ite( lt( dGbind_BA, desired_off_target_dGbind ), dGbind_BA, 0.0 * dGbind_BA + desired_off_target_dGbind ))
+SCALAR_EXPRESSION destab_AWT_bonus = AA_decent * ( off_target_destab_start - ite( lt( dGbind_AWT, desired_off_target_dGbind ), dGbind_AWT, 0.0 * dGbind_AWT + desired_off_target_dGbind ))
+SCALAR_EXPRESSION destab_WTA_bonus = AA_decent * ( off_target_destab_start - ite( lt( dGbind_WTA, desired_off_target_dGbind ), dGbind_WTA, 0.0 * dGbind_WTA + desired_off_target_dGbind ))
+SCALAR_EXPRESSION destab_BWT_bonus = BB_decent * ( off_target_destab_start - ite( lt( dGbind_BWT, desired_off_target_dGbind ), dGbind_BWT, 0.0 * dGbind_BWT + desired_off_target_dGbind ))
+SCALAR_EXPRESSION destab_WTB_bonus = BB_decent * ( off_target_destab_start - ite( lt( dGbind_WTB, desired_off_target_dGbind ), dGbind_WTB, 0.0 * dGbind_WTB + desired_off_target_dGbind ))
+
+
+# linaer penalty for destabilizing the on-target interactions beyond some minimum
+SCALAR_EXPRESSION desired_on_target_dGbind = -184
+SCALAR_EXPRESSION AA_binding_req = ( dGbind_AA - desired_on_target_dGbind ) * ite( gt( dGbind_AA, desired_on_target_dGbind ), 1.0, 0.0 )
+SCALAR_EXPRESSION BB_binding_req = ( dGbind_BB - desired_on_target_dGbind ) * ite( gt( dGbind_BB, desired_on_target_dGbind ), 1.0, 0.0 )
+SCALAR_EXPRESSION bad_on_target_dG_penalty = AA_binding_req + BB_binding_req
+
+SCALAR_EXPRESSION off_target_bonuses = destab_AB_bonus + destab_BA_bonus + destab_AWT_bonus + destab_WTA_bonus + destab_BWT_bonus + destab_WTB_bonus
+
+FITNESS bestAA + bestBB + %(WSCAN)s * ( off_target_bonuses + bad_on_target_dG_penalty ) + 1000 * AA_indecent + 1000 * BB_indecent

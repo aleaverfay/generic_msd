@@ -1,0 +1,16 @@
+pdbs:
+  - {species: AH3_AH4,  pdb: 1KX5_chAB.pdb}
+  - {species: BH3_BH4,  pdb: 1KX5_chAB.pdb}
+  - {species: AH3_BH4,  pdb: 1KX5_chAB.pdb}
+  - {species: BH3_AH4,  pdb: 1KX5_chAB.pdb}
+  - {species: AH3_WTH4,  pdb: 1KX5_chAB.pdb}
+  - {species: WTH3_AH4,  pdb: 1KX5_chAB.pdb}
+  - {species: BH3_WTH4,  pdb: 1KX5_chAB.pdb}
+  - {species: WTH3_BH4,  pdb: 1KX5_chAB.pdb}
+  - {species: AH3m,  pdb: 1KX5_chA.pdb}
+  - {species: BH3m,  pdb: 1KX5_chA.pdb}
+  - {species: AH4m,  pdb: 1KX5_chB.pdb}
+  - {species: BH4m,  pdb: 1KX5_chB.pdb}
+pose_energy_vector_lists:
+  - WTH3.list
+  - WTH4.list

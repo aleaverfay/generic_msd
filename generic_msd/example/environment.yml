@@ -1,0 +1,19 @@
+name: h3h4
+channels:
+  - https://username:password@conda.graylab.jhu.edu
+dependencies:
+  - pyrosetta
+  - python>=3.6
+  - toolz
+  - pyyaml
+  - biopython
+  - pytest
+  - pytest-cov
+  - flake8
+  - pip:
+    - attrs
+    - codecov
+    - black==18.6b4
+    - pre-commit
+
+

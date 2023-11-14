@@ -1,0 +1,41 @@
+<ROSETTASCRIPTS>
+  <SCOREFXNS>
+    <ScoreFunction name="ref2015" weights="ref2015.wts"/>
+  </SCOREFXNS>
+  <RESIDUE_SELECTORS>
+    <Chain name="h3h4" chains="A,B"/>
+    <Not name="not_h3h4" selector="h3h4"/>
+    <InterfaceByVector name="h3h4_vs_surroundings" grp1_selector="h3h4" grp2_selector="not_h3h4"/>
+    <Or name="h3h4_and_surroundings" selectors="h3h4,h3h4_vs_surroundings"/>
+    <Not name="not_h3h4_or_interface" selector="h3h4_and_surroundings"/>
+  </RESIDUE_SELECTORS>
+  <JUMP_SELECTORS>
+    <JumpIndex name="jump2" jump="2"/>
+    <JumpIndex name="jump3" jump="3"/>
+  </JUMP_SELECTORS>
+  <TASKOPERATIONS>
+    <OperateOnResidueSubset name="onlypack_h3h4" selector="not_h3h4_or_interface">
+      <PreventRepackingRLT/>
+    </OperateOnResidueSubset>
+    ReadResfile name=mut1 filename=mut1.resfile
+  </TASKOPERATIONS>
+  <FILTERS>
+  </FILTERS>
+  <MOVE_MAP_FACTORIES>
+    <MoveMapFactory name="just_h3h4" bb="0" chi="0" jumps="0">
+      <Backbone residue_selector="h3h4"/>
+      <Chi residue_selector="h3h4_and_surroundings"/>
+      <Jumps jump_selector="jump2"/>
+      <Jumps jump_selector="jump3"/>
+    </MoveMapFactory>
+  </MOVE_MAP_FACTORIES>
+  <MOVERS>
+    <FastRelax name="relax" scorefxn="ref2015" min_type="lbfgs_armijo_nonmonotone" movemap_factory="just_h3h4" task_operations="onlypack_h3h4"/>
+  </MOVERS>
+  <APPLY_TO_POSE>
+  </APPLY_TO_POSE>
+  <PROTOCOLS>
+    <Add mover="relax"/>
+  </PROTOCOLS>
+  <OUTPUT scorefxn="ref2015"/>
+</ROSETTASCRIPTS>
