@@ -1,0 +1,32 @@
+This repository contains base classes that help manage the surprisingly complex
+task of input-file management in protein specificity / multistate design particularly
+on UNC's MPI cluster, dogwood.
+
+The goal of the functionality provided in these classes is to make the work
+requried to write the script for preparing and launching a set of multistate
+design jobs relatively easy.
+
+The "setup_jobs.py" script will look something like this:
+
+    import (some things)
+
+    si = ServerIdentifier()
+    opts = OptHolder()
+    with blargs.Parser(opts) as p:
+        DerivedMSDJob.add_options(p)
+        JobExecutionOptions.add_options(p)
+
+    msd_job = DerivedMSDJob(opts)
+    msd_job_manager = MSDJobManager(msd_job, opts, si)
+    msd_job_manager.prepare_job()
+
+and that's it.
+
+The programmer will define a class DerivedMSDJob, derived from either
+the IsolateBBInterfaceMSDJob class or the MergeBBInterfaceMSDJob, and
+with the DerivedMSDJob, a DerivedDesignSpecies class, derived from
+either the IsolateBBDesignSpecies or the MergeBBDesignSpecies classes,
+and a DerivedStateVersion class, derived from either the 
+IsolateBBStateVersion or MergeBBStateVersion classes. These three
+classes will specify how the design job should proceed in broad
+strokes, where their base classes will do the heavy lifting.

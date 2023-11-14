@@ -25,16 +25,23 @@ class ServerIdentifier:
 
         This function is ever so slightly expensive, and needs only to
         be run once, so it is memoized"""
+        print("what computer?", self.masquerade)
+
         if self.masquerade:
             return self.masquerade
 
         hostname = socket.gethostname()
+        print("hostname:", hostname)
+
         if self._on_killdevil(hostname):
             print("on killdevil")
             return KnownComputers.KILLDEVIL
         elif self._on_dogwood(hostname):
             print("on dogwood")
             return KnownComputers.DOGWOOD
+        elif self._on_longleaf(hostname):
+            print("on longleaf")
+            return KnownComputers.LONGLEAF
         elif hostname == "wiggins":
             print("on wiggins")
             return KnownComputers.WIGGINS
@@ -68,6 +75,18 @@ class ServerIdentifier:
             return True
         elif hostname.startswith("c-"):
             node_num = int(hostname.split("-")[1])
-            return node_num >= 201 and node_num <= 211
+            return node_num >= 201 and node_num <= 212
+        else:
+            return False
+
+    def _on_longleaf(self, hostname=None):
+        """Logic for figuring out whether or not you're on longleaf"""
+        if hostname is None:
+            hostname = socket.gethostname()
+        if hostname.startswith("longleaf"):
+            return True
+        elif hostname.startswith("c-"):
+            node_num = int(hostname.split("-")[1])
+            return node_num >= 201 and node_num <= 212
         else:
             return False

@@ -70,7 +70,12 @@ class JobExecutionOptions:
 
 def rosetta_dir(si: ServerIdentifier):
     server = si.what_computer()
-    assert server == KnownComputers.KILLDEVIL or server == KnownComputers.DOGWOOD
+    assert (
+        server == KnownComputers.KILLDEVIL or
+        server == KnownComputers.DOGWOOD or
+        server == KnownComputers.LONGLEAF
+    )
+        
     return (
         "/nas02/home/l/e/leaverfa/GIT/main/"
         if server == KnownComputers.KILLDEVIL
@@ -88,7 +93,11 @@ def db_path(si: ServerIdentifier):
 
 def mpi_msd_exe(si: ServerIdentifier):
     server = si.what_computer()
-    assert server == KnownComputers.KILLDEVIL or server == KnownComputers.DOGWOOD
+    assert (
+        server == KnownComputers.KILLDEVIL or
+        server == KnownComputers.DOGWOOD or
+        server == KnownComputers.LONGLEAF
+    )
 
     return (
         bin_dir(si) + "mpi_msd.mpiserialization.linuxgccrelease"
@@ -180,6 +189,7 @@ class MSDJobManager:
         ngen = self.msd_job.ngen()
 
         job_options = SubmissionOptions()
+        job_options.server = self.si.what_computer()
         job_options.scheduler = scheduler_type_for_server(self.si)
         job_options.num_nodes = nprocs
         job_options.queue = queue_name
@@ -273,6 +283,7 @@ class MSDJobManager:
 
         # now prepare the dock_jobs_view command and append it to the launch_docking script
         dock_jobs_view_job_opts = SubmissionOptions()
+        dock_jobs_view_job_opts.server = self.si.what_computer()
         dock_jobs_view_job_opts.scheduler = scheduler_type_for_server(self.si)
         dock_jobs_view_job_opts.num_nodes = 1
         dock_jobs_view_job_opts.queue = "debug_queue"
@@ -308,6 +319,7 @@ class MSDJobManager:
         launch_docking_script.append(" ".join(dock_jobs_view_submission_command))
 
         launch_docking_job_opts = SubmissionOptions()
+        launch_docking_job_opts.server = self.si.what_computer()
         launch_docking_job_opts.scheduler = scheduler_type_for_server(self.si)
         launch_docking_job_opts.num_nodes = 1
         launch_docking_job_opts.queue = "debug"
